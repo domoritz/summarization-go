@@ -3,56 +3,52 @@ package summary
 import (
 	"bytes"
 	"errors"
-	"sort"
+	"fmt"
 	"strings"
 )
 
 // Tuple is a map of attributes
-type Tuple map[string]Attribute
+type Tuple []Attribute
 
 // NewTupleFromString creates a tuple from a string
-func NewTupleFromString(description string, attributes []string) (Tuple, error) {
-	tuple := make(Tuple)
+func NewTupleFromString(description string, numAttr int) (Tuple, error) {
+	tuple := make(Tuple, numAttr)
 
-	for i, value := range strings.Split(description, ",") {
-		if i >= len(attributes) {
-			return nil, errors.New("Not enough attributes")
-		}
-		name := attributes[i]
+	values := strings.Split(description, ",")
+	if len(values) != numAttr {
+		err := fmt.Sprintf("Wrong number of attributes. Expected %d but got %d.", numAttr, len(values))
+		return nil, errors.New(err)
+	}
+
+	for i, value := range values {
 		value = strings.TrimSpace(value)
 		if strings.HasPrefix(value, "{") {
 			value = strings.TrimPrefix(value, "{")
 			value = strings.TrimSuffix(value, "}")
-			values := strings.Split(value, " ")
+			setValues := strings.Split(value, " ")
 			setValue := make(map[string]bool)
-			for _, v := range values {
+			for _, v := range setValues {
 				setValue[v] = true
 			}
-			a := NewSet(name, setValue)
-			tuple[name] = a
+			a := NewSet(setValue)
+			tuple[i] = a
 		} else if strings.HasPrefix(value, "[") {
 			// TODO
 		} else {
-			a := NewSingle(name, value)
-			tuple[name] = a
+			a := NewSingle(value)
+			tuple[i] = a
 		}
 	}
 
 	return tuple, nil
 }
 
-// DebugString prints a tuple
+// DebugString prints a tuple without attribute names
 func (tuple *Tuple) DebugString() string {
 	var buffer bytes.Buffer
 
-	names := make([]string, 0, len(*tuple))
-	for n := range *tuple {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		buffer.WriteString((*tuple)[name].DebugString())
+	for i := 0; i < len(*tuple); i++ {
+		buffer.WriteString((*tuple)[i].DebugString())
 		buffer.WriteString(" ")
 	}
 

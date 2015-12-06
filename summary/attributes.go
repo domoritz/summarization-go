@@ -10,24 +10,18 @@ type Attribute interface {
 	DebugString() string
 }
 
-type baseAttribute struct {
-	name string
-}
-
 // SingleValueAttribute has a single value
 type SingleValueAttribute struct {
-	baseAttribute
 	value string
 }
 
 // DebugString prints the attribute name and value
 func (a *SingleValueAttribute) DebugString() string {
-	return a.name + "=" + a.value
+	return a.value
 }
 
 // SetAttribute has a set of values
 type SetAttribute struct {
-	baseAttribute
 	values map[string]bool
 }
 
@@ -42,8 +36,7 @@ func (a *SetAttribute) getValues() []string {
 // DebugString prints the attribute name and value
 func (a *SetAttribute) DebugString() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(a.name)
-	buffer.WriteString("={")
+	buffer.WriteString("{")
 	buffer.WriteString(strings.Join(a.getValues(), " "))
 	buffer.WriteString("}")
 	return buffer.String()
@@ -51,16 +44,15 @@ func (a *SetAttribute) DebugString() string {
 
 // HierarchyAttribute is a hierarchical attribute
 type HierarchyAttribute struct {
-	baseAttribute
 	hierarchy []string
 }
 
 // NewSingle creates a new SingleValueAttribute
-func NewSingle(name string, value string) *SingleValueAttribute {
-	return &SingleValueAttribute{baseAttribute{name}, value}
+func NewSingle(value string) *SingleValueAttribute {
+	return &SingleValueAttribute{value}
 }
 
 // NewSet creates a new SetAttribute
-func NewSet(name string, value map[string]bool) *SetAttribute {
-	return &SetAttribute{baseAttribute{name}, value}
+func NewSet(value map[string]bool) *SetAttribute {
+	return &SetAttribute{value}
 }
