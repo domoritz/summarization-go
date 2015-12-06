@@ -44,11 +44,11 @@ func NewTupleFromString(description string, numAttr int) (Tuple, error) {
 }
 
 // DebugString prints a tuple without attribute names
-func (tuple *Tuple) DebugString() string {
+func (tuple Tuple) DebugString() string {
 	var buffer bytes.Buffer
 
-	for i := 0; i < len(*tuple); i++ {
-		buffer.WriteString((*tuple)[i].DebugString())
+	for i := 0; i < len(tuple); i++ {
+		buffer.WriteString(tuple[i].DebugString())
 		buffer.WriteString(" ")
 	}
 
