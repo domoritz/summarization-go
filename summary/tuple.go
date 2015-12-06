@@ -15,25 +15,23 @@ type Tuple struct {
 }
 
 // Coverage true if the tuple satisfies the formula (formula is subset) in addition to the size of the cover.
-func (tuple *Tuple) Coverage(formula *Tuple) (bool, int, int) {
-	coverDiff := 0
-	cover := 0
+func (tuple *Tuple) Coverage(formula *Tuple) (bool, int) {
+	coverage := 0
 
 	for i, attr := range tuple.Single {
 		if formula.Single[i] == nil {
 			continue
 		}
 		if attr == nil {
-			return false, -1, -1
+			return false, -1
 		}
 
 		if !formula.Single[i].Equal(attr) {
-			return false, -1, -1
+			return false, -1
 		}
 		if !attr.covered {
-			coverDiff++
+			coverage++
 		}
-		cover++
 	}
 
 	for i, attr := range tuple.Set {
@@ -41,14 +39,13 @@ func (tuple *Tuple) Coverage(formula *Tuple) (bool, int, int) {
 			continue
 		}
 		if attr == nil {
-			return false, -1, -1
+			return false, -1
 		}
 
 		if ok, cover := formula.Set[i].SubsetCover(attr); ok {
-			coverDiff += cover
-			cover += len(formula.Set[i].values)
+			coverage += cover
 		} else {
-			return false, -1, -1
+			return false, -1
 		}
 	}
 
@@ -57,16 +54,16 @@ func (tuple *Tuple) Coverage(formula *Tuple) (bool, int, int) {
 			continue
 		}
 		if attr == nil {
-			return false, -1, -1
+			return false, -1
 		}
 
 		if !formula.Hierarchy[i].Prefix(attr) {
-			return false, -1, -1
+			return false, -1
 		}
-		coverDiff += len(formula.Hierarchy[i].hierarchy)
+		coverage += len(formula.Hierarchy[i].hierarchy)
 	}
 
-	return true, cover, coverDiff
+	return true, coverage
 }
 
 // NewTupleFromCell creates a new tuple with only one cell

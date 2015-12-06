@@ -51,20 +51,17 @@ func (relation *Relation) GetSizes() Sizes {
 }
 
 // Coverage calculates how much more a formula can cover
-func (relation *Relation) Coverage(formula *Tuple) (int, int) {
+func (relation *Relation) Coverage(formula *Tuple) int {
 	coverage := 0
-	coverageDiff := 0
 
-	// TODO: do this per row and see whether it is faster
 	for _, tuple := range relation.Tuples {
-		satisfies, cover, coverDiff := tuple.Coverage(formula)
+		satisfies, cover := tuple.Coverage(formula)
 		if satisfies {
 			coverage += cover
-			coverageDiff += coverDiff
 		}
 	}
 
-	return coverage, coverageDiff
+	return coverage
 }
 
 // NewRelationFromString creates a relation from a string
