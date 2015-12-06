@@ -2,12 +2,13 @@ package summary
 
 // SingleValueAttribute has a single value
 type SingleValueAttribute struct {
-	value string
+	value   string
+	covered bool
 }
 
 // NewSingle creates a new SingleValueAttribute
 func NewSingle(value string) SingleValueAttribute {
-	return SingleValueAttribute{value}
+	return SingleValueAttribute{value, false}
 }
 
 // Equal returns true if attribute satisfies the other attribute

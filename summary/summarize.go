@@ -43,7 +43,7 @@ func (d *cellSlice) DebugPrint() {
 	fmt.Println()
 }
 
-// Summarize returns a summary of size size
+// Summarize returns a summary of the relation
 func (relation *Relation) Summarize(size int) Relation {
 	var tuples []Tuple
 	summary := Relation{tuples, relation.AttributeNames, relation.AttributeTypes, relation.GetSizes()}

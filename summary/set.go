@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Set is a set
+// Set is a set of values. The boolean value indicates whether the particular value is covered.
 type Set map[string]bool
 
 // SetAttribute is a set attribute
@@ -19,14 +19,20 @@ func NewSet(value Set) SetAttribute {
 	return SetAttribute{value}
 }
 
-// Subset returns true if attribute is subset of other attribute
-func (a *SetAttribute) Subset(other *SetAttribute) bool {
+// SubsetCover returns true if attribute is subset of other attribute. If a is a subset of other, also returns the count of new covers.
+func (a *SetAttribute) SubsetCover(other *SetAttribute) (bool, int) {
+	cover := 0
 	for value := range a.values {
-		if _, has := other.values[value]; !has {
-			return false
+		if covered, has := other.values[value]; has {
+			if !covered {
+				cover++
+			}
+		} else {
+			return false, -1
 		}
+
 	}
-	return true
+	return true, cover
 }
 
 func (a *SetAttribute) getValues() []string {

@@ -50,6 +50,17 @@ func (relation *Relation) GetSizes() Sizes {
 	return relation.attributeSizes
 }
 
+// Covers calculates how much more a formula can cover
+func (relation *Relation) Covers(formula *Tuple) int {
+	coverage := 0
+
+	// for _, tuple := range relation.Tuples {
+	//
+	// }
+
+	return coverage
+}
+
 // NewRelationFromString creates a relation from a string
 func NewRelationFromString(description string) (*Relation, error) {
 	var tuples []Tuple

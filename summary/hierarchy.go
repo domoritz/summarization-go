@@ -19,7 +19,7 @@ func NewHierachy(hierarchy Hierarchy) HierarchyAttribute {
 	return HierarchyAttribute{hierarchy}
 }
 
-// Prefix returns true if attribute is prefix of other atribute
+// Prefix returns true if attribute is prefix of other attribute
 func (a *HierarchyAttribute) Prefix(other *HierarchyAttribute) bool {
 	if len(a.hierarchy) > len(other.hierarchy) {
 		return false

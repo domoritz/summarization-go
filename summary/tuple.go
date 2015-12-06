@@ -14,7 +14,7 @@ type Tuple struct {
 	Hierarchy []*HierarchyAttribute
 }
 
-// Coverage true if the tuple satisfies the formula (formula is subset) in addition to the size of the coverage.
+// Coverage true if the tuple satisfies the formula (formula is subset) in addition to the size of the cover.
 func (tuple *Tuple) Coverage(formula *Tuple) (bool, int) {
 	coverage := 0
 
@@ -29,7 +29,9 @@ func (tuple *Tuple) Coverage(formula *Tuple) (bool, int) {
 		if !formula.Single[i].Equal(attr) {
 			return false, -1
 		}
-		coverage++
+		if !attr.covered {
+			coverage++
+		}
 	}
 
 	for i, attr := range tuple.Set {
@@ -40,10 +42,11 @@ func (tuple *Tuple) Coverage(formula *Tuple) (bool, int) {
 			return false, -1
 		}
 
-		if !formula.Set[i].Subset(attr) {
+		if ok, cover := formula.Set[i].SubsetCover(attr); ok {
+			coverage += cover
+		} else {
 			return false, -1
 		}
-		coverage += len(formula.Set[i].values)
 	}
 
 	for i, attr := range tuple.Hierarchy {
@@ -63,21 +66,6 @@ func (tuple *Tuple) Coverage(formula *Tuple) (bool, int) {
 	return true, coverage
 }
 
-// Size returns the size of the tuple
-func (tuple *Tuple) Size() int {
-	length := len(tuple.Single)
-
-	for _, attr := range tuple.Set {
-		length += len(attr.values)
-	}
-
-	for _, attr := range tuple.Hierarchy {
-		length += len(attr.hierarchy)
-	}
-
-	return length
-}
-
 // NewTupleFromCell creates a new tuple with only one cell
 func NewTupleFromCell(cell Cell, sizes Sizes) Tuple {
 	singles := make([]*SingleValueAttribute, sizes.single)
@@ -90,7 +78,7 @@ func NewTupleFromCell(cell Cell, sizes Sizes) Tuple {
 		a := NewSingle(cell.Value)
 		tuple.Single[cell.Attribute] = &a
 	case set:
-		a := NewSet(Set{cell.Value: true})
+		a := NewSet(Set{cell.Value: false})
 		tuple.Set[cell.Attribute] = &a
 	case hierarchy:
 		// TODO
@@ -123,7 +111,7 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 
 			setValue := make(map[string]bool)
 			for _, v := range setValues {
-				setValue[v] = true
+				setValue[v] = false
 			}
 			a := NewSet(setValue)
 			tuple.Set = append(tuple.Set, &a)
@@ -149,7 +137,7 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 	return tuple, nil
 }
 
-//AddCells adds all cells to the map
+// AddCells adds all cells from the tuple to the map
 func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
 	for i, attr := range tuple.Single {
 		if attr != nil {
