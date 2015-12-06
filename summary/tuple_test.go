@@ -62,3 +62,11 @@ func TestSatisfiesNulls(t *testing.T) {
 		t.Error("Should not satisfy")
 	}
 }
+
+func TestSize(t *testing.T) {
+	a, _ := NewTupleFromString("a,a b c,a b", []Type{single, set, hierarchy})
+
+	if a.Size() != 6 {
+		t.Error("Size should be 6")
+	}
+}

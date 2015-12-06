@@ -58,6 +58,21 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 	return true
 }
 
+// Size returns the size of the tuple
+func (tuple *Tuple) Size() int {
+	length := len(tuple.Single)
+
+	for _, attr := range tuple.Set {
+		length += len(attr.values)
+	}
+
+	for _, attr := range tuple.Hierarchy {
+		length += len(attr.hierarchy)
+	}
+
+	return length
+}
+
 // NewTupleFromString creates a tuple from a string
 func NewTupleFromString(description string, types []Type) (Tuple, error) {
 	tuple := Tuple{}
