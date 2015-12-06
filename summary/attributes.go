@@ -5,12 +5,6 @@ import (
 	"strings"
 )
 
-// Attribute is an attribute
-type Attribute interface {
-	// DebugString() string
-	Satisfies(attr Attribute) bool
-}
-
 //
 // Single
 //
@@ -21,18 +15,13 @@ type SingleValueAttribute struct {
 }
 
 // NewSingle creates a new SingleValueAttribute
-func NewSingle(value string) *SingleValueAttribute {
-	return &SingleValueAttribute{value}
+func NewSingle(value string) SingleValueAttribute {
+	return SingleValueAttribute{value}
 }
 
 // Satisfies returns true if attribute satisfies the other attribute
-func (a *SingleValueAttribute) Satisfies(other Attribute) bool {
-	switch otherAttr := other.(type) {
-	case SingleValueAttribute:
-		return a.value == otherAttr.value
-	default:
-		return false
-	}
+func (a *SingleValueAttribute) Satisfies(other *SingleValueAttribute) bool {
+	return a.value == other.value
 }
 
 // DebugString prints the attribute name and value
@@ -50,23 +39,18 @@ type SetAttribute struct {
 }
 
 // NewSet creates a new SetAttribute
-func NewSet(value map[string]bool) *SetAttribute {
-	return &SetAttribute{value}
+func NewSet(value map[string]bool) SetAttribute {
+	return SetAttribute{value}
 }
 
 // Satisfies returns true if attribute satisfies the other attribute
-func (a *SetAttribute) Satisfies(other *Attribute) bool {
-	switch otherAttr := other.(type) {
-	case SetAttribute:
-		for value := range other.values {
-			if _, has := a.values[value]; !has {
-				return false
-			}
+func (a *SetAttribute) Satisfies(other *SetAttribute) bool {
+	for value := range other.values {
+		if _, has := a.values[value]; !has {
+			return false
 		}
-		return true
-	default:
-		return false
 	}
+	return true
 }
 
 func (a *SetAttribute) getValues() []string {
@@ -93,4 +77,13 @@ func (a *SetAttribute) DebugString() string {
 // HierarchyAttribute is a hierarchical attribute
 type HierarchyAttribute struct {
 	hierarchy []string
+}
+
+// DebugString prints the attribute name and value
+func (a *HierarchyAttribute) DebugString() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+	buffer.WriteString(strings.Join(a.hierarchy, " "))
+	buffer.WriteString("]")
+	return buffer.String()
 }
