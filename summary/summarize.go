@@ -61,9 +61,14 @@ func (relation *Relation) Summarize(size int) Relation {
 			// TODO: check potential
 
 			if len(summary.Tuples) < size {
-				// try new formula
+				// try new formula and see how much of uncovered space it can cover
 				formula := NewTupleFromCell(*cell, summary.GetSizes())
-				coverage := relation.Coverage(&formula)
+				_, coverageDiff := relation.Coverage(&formula)
+			}
+
+			// try adding to existing formula and see how it changes coverage
+			for i, existing := range summary.Tuples {
+				_, coverageDiff := relation.Coverage(&formula)
 			}
 
 		}
