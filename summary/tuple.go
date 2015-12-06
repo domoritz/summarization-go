@@ -14,19 +14,22 @@ type Tuple struct {
 	Hierarchy []*HierarchyAttribute
 }
 
-// Satisfies is true if the tuple satisfies the formula (formula is subset)
-func (tuple *Tuple) Satisfies(formula *Tuple) bool {
+// Coverage true if the tuple satisfies the formula (formula is subset) in addition to the size of the coverage.
+func (tuple *Tuple) Coverage(formula *Tuple) (bool, int) {
+	coverage := 0
+
 	for i, attr := range tuple.Single {
 		if formula.Single[i] == nil {
 			continue
 		}
 		if attr == nil {
-			return false
+			return false, -1
 		}
 
 		if !formula.Single[i].Equal(attr) {
-			return false
+			return false, -1
 		}
+		coverage++
 	}
 
 	for i, attr := range tuple.Set {
@@ -34,12 +37,13 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 			continue
 		}
 		if attr == nil {
-			return false
+			return false, -1
 		}
 
 		if !formula.Set[i].Subset(attr) {
-			return false
+			return false, -1
 		}
+		coverage += len(formula.Set[i].values)
 	}
 
 	for i, attr := range tuple.Hierarchy {
@@ -47,15 +51,16 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 			continue
 		}
 		if attr == nil {
-			return false
+			return false, -1
 		}
 
 		if !formula.Hierarchy[i].Prefix(attr) {
-			return false
+			return false, -1
 		}
+		coverage += len(formula.Hierarchy[i].hierarchy)
 	}
 
-	return true
+	return true, coverage
 }
 
 // Size returns the size of the tuple
