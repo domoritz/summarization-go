@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	r, err := summary.NewRelationFromString("single,single,set\nx,y,z\na, b, c d\n b, c, d e f\n a, b, c e")
+	r, err := summary.NewRelationFromString("single,single,set\nx,y,z\na,b,c d\nb,,d e f\na,b,c e\na,a,")
 	if err != nil {
 		log.Fatal(err)
 	}

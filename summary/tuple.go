@@ -9,9 +9,32 @@ import (
 
 // Tuple is a map of attributes
 type Tuple struct {
-	Single    []SingleValueAttribute
-	Set       []SetAttribute
-	Hierarchy []HierarchyAttribute
+	Single    []*SingleValueAttribute
+	Set       []*SetAttribute
+	Hierarchy []*HierarchyAttribute
+}
+
+// Satisfies is true if the tuple satisfies the formula (formula is subset)
+func (tuple *Tuple) Satisfies(formula *Tuple) bool {
+	for i, attr := range tuple.Single {
+		if !formula.Single[i].Equal(attr) {
+			return false
+		}
+	}
+
+	for i, attr := range tuple.Set {
+		if !formula.Set[i].Subset(attr) {
+			return false
+		}
+	}
+
+	for i, attr := range tuple.Hierarchy {
+		if !formula.Hierarchy[i].Prefix(attr) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // NewTupleFromString creates a tuple from a string
@@ -28,16 +51,28 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 		value = strings.TrimSpace(value)
 		switch types[i] {
 		case set:
+			if len(value) == 0 {
+				// insert null
+				tuple.Set = append(tuple.Set, nil)
+				break
+			}
+
 			setValues := strings.Split(value, " ")
+
 			setValue := make(map[string]bool)
 			for _, v := range setValues {
 				setValue[v] = true
 			}
 			a := NewSet(setValue)
-			tuple.Set = append(tuple.Set, a)
+			tuple.Set = append(tuple.Set, &a)
 		case single:
+			if len(value) == 0 {
+				// insert null
+				tuple.Single = append(tuple.Single, nil)
+				break
+			}
 			a := NewSingle(value)
-			tuple.Single = append(tuple.Single, a)
+			tuple.Single = append(tuple.Single, &a)
 		case hierarchy:
 			// TODO
 		}
@@ -46,8 +81,8 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 	return tuple, nil
 }
 
-// GetValues returns a list of values in order of the types
-func (tuple *Tuple) GetValues(types []Type) []string {
+// GetDebugStrings returns a list of values in order of the types
+func (tuple *Tuple) GetDebugStrings(types []Type) []string {
 	values := make([]string, len(types))
 
 	singleIndex := 0

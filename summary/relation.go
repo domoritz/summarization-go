@@ -90,7 +90,7 @@ func (relation *Relation) PrintDebugString() {
 	table.SetHeader(names)
 
 	for _, tuple := range relation.Tuples {
-		values := tuple.GetValues(relation.AttributeTypes)
+		values := tuple.GetDebugStrings(relation.AttributeTypes)
 		table.Append(values)
 	}
 
