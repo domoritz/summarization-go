@@ -18,7 +18,7 @@ type Tuple struct {
 func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 	for i, attr := range tuple.Single {
 		if formula.Single[i] == nil {
-			return true
+			continue
 		}
 		if attr == nil {
 			return false
@@ -31,7 +31,7 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 
 	for i, attr := range tuple.Set {
 		if formula.Set[i] == nil {
-			return true
+			continue
 		}
 		if attr == nil {
 			return false
@@ -44,7 +44,7 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 
 	for i, attr := range tuple.Hierarchy {
 		if formula.Hierarchy[i] == nil {
-			return true
+			continue
 		}
 		if attr == nil {
 			return false
