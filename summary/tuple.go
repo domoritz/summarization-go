@@ -17,18 +17,39 @@ type Tuple struct {
 // Satisfies is true if the tuple satisfies the formula (formula is subset)
 func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 	for i, attr := range tuple.Single {
+		if formula.Single[i] == nil {
+			return true
+		}
+		if attr == nil {
+			return false
+		}
+
 		if !formula.Single[i].Equal(attr) {
 			return false
 		}
 	}
 
 	for i, attr := range tuple.Set {
+		if formula.Set[i] == nil {
+			return true
+		}
+		if attr == nil {
+			return false
+		}
+
 		if !formula.Set[i].Subset(attr) {
 			return false
 		}
 	}
 
 	for i, attr := range tuple.Hierarchy {
+		if formula.Hierarchy[i] == nil {
+			return true
+		}
+		if attr == nil {
+			return false
+		}
+
 		if !formula.Hierarchy[i].Prefix(attr) {
 			return false
 		}
@@ -74,7 +95,13 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 			a := NewSingle(value)
 			tuple.Single = append(tuple.Single, &a)
 		case hierarchy:
-			// TODO
+			if len(value) == 0 {
+				// insert null
+				tuple.Hierarchy = append(tuple.Hierarchy, nil)
+				break
+			}
+			a := NewHierachy(strings.Split(value, " "))
+			tuple.Hierarchy = append(tuple.Hierarchy, &a)
 		}
 	}
 
