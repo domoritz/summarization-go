@@ -43,6 +43,10 @@ func NewTupleFromString(description string, numAttr int) (Tuple, error) {
 	return tuple, nil
 }
 
+func Satisfies(tuple, formula) {
+
+}
+
 // DebugString prints a tuple without attribute names
 func (tuple Tuple) DebugString() string {
 	var buffer bytes.Buffer

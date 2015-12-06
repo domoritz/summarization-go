@@ -7,12 +7,32 @@ import (
 
 // Attribute is an attribute
 type Attribute interface {
-	DebugString() string
+	// DebugString() string
+	Satisfies(attr Attribute) bool
 }
+
+//
+// Single
+//
 
 // SingleValueAttribute has a single value
 type SingleValueAttribute struct {
 	value string
+}
+
+// NewSingle creates a new SingleValueAttribute
+func NewSingle(value string) *SingleValueAttribute {
+	return &SingleValueAttribute{value}
+}
+
+// Satisfies returns true if attribute satisfies the other attribute
+func (a *SingleValueAttribute) Satisfies(other Attribute) bool {
+	switch otherAttr := other.(type) {
+	case SingleValueAttribute:
+		return a.value == otherAttr.value
+	default:
+		return false
+	}
 }
 
 // DebugString prints the attribute name and value
@@ -20,9 +40,33 @@ func (a *SingleValueAttribute) DebugString() string {
 	return a.value
 }
 
+//
+// Set
+//
+
 // SetAttribute has a set of values
 type SetAttribute struct {
 	values map[string]bool
+}
+
+// NewSet creates a new SetAttribute
+func NewSet(value map[string]bool) *SetAttribute {
+	return &SetAttribute{value}
+}
+
+// Satisfies returns true if attribute satisfies the other attribute
+func (a *SetAttribute) Satisfies(other *Attribute) bool {
+	switch otherAttr := other.(type) {
+	case SetAttribute:
+		for value := range other.values {
+			if _, has := a.values[value]; !has {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 func (a *SetAttribute) getValues() []string {
@@ -42,17 +86,11 @@ func (a *SetAttribute) DebugString() string {
 	return buffer.String()
 }
 
+//
+// Hierarchy
+//
+
 // HierarchyAttribute is a hierarchical attribute
 type HierarchyAttribute struct {
 	hierarchy []string
-}
-
-// NewSingle creates a new SingleValueAttribute
-func NewSingle(value string) *SingleValueAttribute {
-	return &SingleValueAttribute{value}
-}
-
-// NewSet creates a new SetAttribute
-func NewSet(value map[string]bool) *SetAttribute {
-	return &SetAttribute{value}
 }
