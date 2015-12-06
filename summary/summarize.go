@@ -62,8 +62,8 @@ func (relation *Relation) Summarize(size int) Relation {
 
 			if len(summary.Tuples) < size {
 				// try new formula
-				summary.Tuples = append(summary.Tuples, NewTupleFromCell(*cell, summary.GetSizes()))
-				// coverage = relation.Covers(summary)
+				formula := NewTupleFromCell(*cell, summary.GetSizes())
+				coverage := relation.Coverage(&formula)
 			}
 
 		}

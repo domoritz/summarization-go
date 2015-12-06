@@ -50,13 +50,16 @@ func (relation *Relation) GetSizes() Sizes {
 	return relation.attributeSizes
 }
 
-// Covers calculates how much more a formula can cover
-func (relation *Relation) Covers(formula *Tuple) int {
+// Coverage calculates how much more a formula can cover
+func (relation *Relation) Coverage(formula *Tuple) int {
 	coverage := 0
 
-	// for _, tuple := range relation.Tuples {
-	//
-	// }
+	for _, tuple := range relation.Tuples {
+		satisfies, cover := tuple.Coverage(formula)
+		if satisfies {
+			coverage += cover
+		}
+	}
 
 	return coverage
 }
