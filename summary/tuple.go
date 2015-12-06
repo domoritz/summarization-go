@@ -73,6 +73,27 @@ func (tuple *Tuple) Size() int {
 	return length
 }
 
+// NewTupleFromCell creates a new tuple with only one cell
+func NewTupleFromCell(cell Cell, sizes Sizes) Tuple {
+	singles := make([]*SingleValueAttribute, sizes.single)
+	sets := make([]*SetAttribute, sizes.set)
+	hierarchies := make([]*HierarchyAttribute, sizes.hierarchy)
+	tuple := Tuple{singles, sets, hierarchies}
+
+	switch cell.Type {
+	case single:
+		a := NewSingle(cell.Value)
+		tuple.Single[cell.Attribute] = &a
+	case set:
+		a := NewSet(Set{cell.Value: true})
+		tuple.Set[cell.Attribute] = &a
+	case hierarchy:
+		// TODO
+	}
+
+	return tuple
+}
+
 // NewTupleFromString creates a tuple from a string
 func NewTupleFromString(description string, types []Type) (Tuple, error) {
 	tuple := Tuple{}
@@ -121,6 +142,41 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 	}
 
 	return tuple, nil
+}
+
+//AddCells adds all cells to the map
+func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
+	for i, attr := range tuple.Single {
+		if attr != nil {
+			key := CellKey{single, i, attr.value}
+			cell, ok := (*cells)[key]
+			if ok {
+				// increase potential
+				cell.Potential++
+			} else {
+				// add new cell
+				(*cells)[key] = &Cell{key, 1}
+			}
+		}
+	}
+
+	for i, attr := range tuple.Set {
+		if attr != nil {
+			for value := range attr.values {
+				key := CellKey{set, i, value}
+				cell, ok := (*cells)[key]
+				if ok {
+					// increase potential
+					cell.Potential++
+				} else {
+					// add new cell
+					(*cells)[key] = &Cell{key, 1}
+				}
+			}
+		}
+	}
+
+	// TODO: hierarchy
 }
 
 // GetDebugStrings returns a list of values in order of the types

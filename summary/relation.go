@@ -11,11 +11,19 @@ import (
 // Type is the attribute type
 type Type int
 
+// Sizes gives us the size of the attribute lists
+type Sizes struct {
+	single    int
+	set       int
+	hierarchy int
+}
+
 // Relation is a slice of tuples
 type Relation struct {
 	Tuples         []Tuple
 	AttributeNames []string
 	AttributeTypes []Type
+	attributeSizes Sizes
 }
 
 const (
@@ -24,8 +32,7 @@ const (
 	hierarchy
 )
 
-// Name gets the type name
-func (t Type) Name() string {
+func (t Type) String() string {
 	switch t {
 	case single:
 		return "single"
@@ -38,6 +45,11 @@ func (t Type) Name() string {
 	}
 }
 
+// GetSizes gets the attribute sizes of the relation used to initialize tuples
+func (relation *Relation) GetSizes() Sizes {
+	return relation.attributeSizes
+}
+
 // NewRelationFromString creates a relation from a string
 func NewRelationFromString(description string) (*Relation, error) {
 	var tuples []Tuple
@@ -46,15 +58,20 @@ func NewRelationFromString(description string) (*Relation, error) {
 	typeNames := strings.Split(lines[0], ",")
 
 	types := make([]Type, len(typeNames))
+	sizes := Sizes{}
+
 	for i, name := range typeNames {
 		name = strings.TrimSpace(name)
 		switch name {
-		case single.Name():
+		case single.String():
 			types[i] = single
-		case set.Name():
+			sizes.single++
+		case set.String():
 			types[i] = set
-		case hierarchy.Name():
+			sizes.set++
+		case hierarchy.String():
 			types[i] = hierarchy
+			sizes.hierarchy++
 		}
 	}
 
@@ -68,7 +85,7 @@ func NewRelationFromString(description string) (*Relation, error) {
 		tuples = append(tuples, tuple)
 	}
 
-	relation := Relation{tuples, names, types}
+	relation := Relation{tuples, names, types, sizes}
 
 	return &relation, nil
 }
@@ -84,7 +101,7 @@ func (relation *Relation) PrintDebugString() {
 
 	names := make([]string, len(relation.AttributeNames))
 	for i := 0; i < relation.NumAttributes(); i++ {
-		names[i] = fmt.Sprintf("%s (%s)", relation.AttributeNames[i], relation.AttributeTypes[i].Name())
+		names[i] = fmt.Sprintf("%s (%s)", relation.AttributeNames[i], relation.AttributeTypes[i])
 	}
 
 	table.SetHeader(names)
