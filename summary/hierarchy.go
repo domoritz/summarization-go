@@ -12,6 +12,7 @@ type Hierarchy []string
 // HierarchyAttribute is hierarchical
 type HierarchyAttribute struct {
 	hierarchy Hierarchy
+	// TODO: add counts
 }
 
 // NewHierachy creates a new hierarchical attribute

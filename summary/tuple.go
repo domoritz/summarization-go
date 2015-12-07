@@ -16,7 +16,6 @@ type Tuple struct {
 	// Formula
 	Cells  []*Cell
 	Tuples []*Tuple
-	Cover  int
 }
 
 // Satisfies is true if the tuple satisfies the formula (formula is subset)
@@ -88,7 +87,7 @@ func NewTupleFromCell(cell *Cell, sizes Sizes) Tuple {
 	singles := make([]*SingleValueAttribute, sizes.single)
 	sets := make([]*SetAttribute, sizes.set)
 	hierarchies := make([]*HierarchyAttribute, sizes.hierarchy)
-	tuple := Tuple{singles, sets, hierarchies, []*Cell{cell}, cell.Tuples, 0}
+	tuple := Tuple{singles, sets, hierarchies, []*Cell{cell}, cell.Tuples}
 
 	switch cell.Type {
 	case single:

@@ -55,11 +55,13 @@ func (relation *Relation) Summarize(size int) Relation {
 
 	cells.DebugPrint()
 
-	// we can only add a formula so we know it's going to be the one from the best cell
-	cell := cells[0]
-	formula := NewTupleFromCell(cell, summary.GetSizes())
-	summary.Tuples = append(summary.Tuples, &formula)
-	relation.IncreaseCounts(cell)
+	{
+		// we can only add a formula so we know it's going to be the one from the best cell
+		cell := cells[0]
+		formula := NewTupleFromCell(cell, summary.GetSizes())
+		summary.Tuples = append(summary.Tuples, &formula)
+		relation.IncreaseCounts(cell)
+	}
 
 	relation.PrintDebugString()
 
@@ -67,11 +69,15 @@ func (relation *Relation) Summarize(size int) Relation {
 		// how much we can cover
 		bestPotential := 0
 		var bestCell *Cell
+		var formulaToAdd *Tuple
 
 		for _, cell := range cells {
-			// TODO: check potential
+			if cell.Potential < bestPotential {
+				fmt.Printf("No way to get better from here on")
+				break
+			}
 
-			if len(summary.Tuples) < size {
+			{
 				// how much new space can we cover with a new formula
 				// a new formula can not have any conflicts so this is easy
 
@@ -84,43 +90,29 @@ func (relation *Relation) Summarize(size int) Relation {
 					}
 				}
 
-				fmt.Printf("Adding %s has potential %d\n", cell, potential)
+				fmt.Printf("Update potential of %s from %d to %d\n", cell, cell.Potential, potential)
+				cell.Potential = potential
 
-				if potential > bestPotential {
+				if potential > bestPotential && len(summary.Tuples) < size {
 					bestPotential = potential
 					bestCell = cell
+					formulaToAdd = nil
 				}
+			}
+
+			if cell.Potential < bestPotential {
+				fmt.Printf("No way to get better from here on")
+				break
 			}
 
 			// how about adding to an existing formula?
 			for _, formula := range summary.Tuples {
-				if cell.Type == single {
-					if formula.Single[cell.Attribute] != nil {
-						// formula already has attribute, so skip it
-						continue
-					}
-
-					// // sum up all
-					// potential := 0
-					// for _, tuple := range formula.Tuples {
-					// 	if tuple.Single[cell.Attribute].value == cell.Value {
-					// 		// tuple doesn't have conflict and we can cover new cell
-					// 		if *tuple.Single[cell.Attribute].covered == 0 {
-					// 			potential++
-					// 		}
-					// 	} else {
-					// 		// now we have a conflict
-					// 		for _, cell := range formula.Cells {
-					// 			switch cell.Type {
-					// 			case single:
-					//
-					// 			}
-					// 		}
-					// 	}
-					// }
+				if formula.SatisfiesCell(cell) {
+					// formula already has attribute, so skip it
+					continue
 				}
 
-				// remove counts
+				// remove counts, let's assume we add a new formula, wht do we get
 				for _, fCell := range formula.Cells {
 					relation.DecreaseCounts(fCell)
 				}
@@ -143,14 +135,77 @@ func (relation *Relation) Summarize(size int) Relation {
 						}
 					}
 				}
+
+				fmt.Printf("Adding %s to %p has potential %d\n", cell, formula, potential)
+
+				if potential > bestPotential {
+					potential = bestPotential
+					bestCell = cell
+					formulaToAdd = formula
+				}
+
+				// add them back
+				for _, fCell := range formula.Cells {
+					relation.IncreaseCounts(fCell)
+				}
 			}
 		}
 
-		fmt.Printf("Adding %s has best potential %d\n", bestCell, bestPotential)
+		if bestPotential == 0 {
+			fmt.Println("Done")
+			break
+		}
 
-		// No need to update potential if we add a single
+		fmt.Printf("Adding %s has best potential %d in formula %p\n", bestCell, bestPotential, formulaToAdd)
 
-		break
+		if formulaToAdd == nil {
+			formula := NewTupleFromCell(bestCell, summary.GetSizes())
+			summary.Tuples = append(summary.Tuples, &formula)
+			relation.IncreaseCounts(bestCell)
+		} else {
+			for _, fCell := range formulaToAdd.Cells {
+				relation.DecreaseCounts(fCell)
+			}
+
+			formulaToAdd.Cells = append(formulaToAdd.Cells, bestCell)
+
+			switch bestCell.Type {
+			case single:
+				attr := NewSingle(bestCell.Value)
+				c := 1
+				attr.covered = &c
+				formulaToAdd.Single[bestCell.Attribute] = &attr
+			case set:
+				attr := formulaToAdd.Set[bestCell.Attribute]
+				c := 1
+				if attr == nil {
+					set := NewSet(Set{bestCell.Value: &c})
+					formulaToAdd.Set[bestCell.Attribute] = &set
+				} else {
+					attr.values[bestCell.Value] = &c
+				}
+			}
+
+			formulaToAdd.Tuples = nil
+			for _, tuple := range relation.Tuples {
+				if tuple.Satisfies(formulaToAdd) {
+					formulaToAdd.Tuples = append(formulaToAdd.Tuples, tuple)
+					for _, fCell := range formulaToAdd.Cells {
+						switch fCell.Type {
+						case single:
+							*tuple.Single[fCell.Attribute].covered++
+						case set:
+							*tuple.Set[fCell.Attribute].values[fCell.Value]++
+						}
+					}
+				}
+			}
+
+		}
+
+		// TODO: No need to update potential if we add a single
+
+		sort.Sort(cells)
 	}
 
 	return summary
