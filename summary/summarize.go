@@ -16,7 +16,7 @@ type CellKey struct {
 type Cell struct {
 	CellKey
 	Potential  int
-	Attributes []*Counter // pointers to counter in attribute
+	Attributes []Counter // pointers to counter in attribute
 	Tuples     []*Tuple   // pointers to tuple
 }
 
