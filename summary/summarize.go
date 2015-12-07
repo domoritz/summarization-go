@@ -17,7 +17,7 @@ type Cell struct {
 	CellKey
 	Potential  int
 	Attributes []Counter // pointers to counter in attribute
-	Tuples     []*Tuple   // pointers to tuple
+	Tuples     []*Tuple  // pointers to tuple
 }
 
 type cellSlice []*Cell
@@ -47,7 +47,7 @@ func (d *cellSlice) DebugPrint() {
 
 // Summarize returns a summary of the relation
 func (relation *Relation) Summarize(size int) Relation {
-	var tuples []Tuple
+	var tuples []*Tuple
 	summary := Relation{tuples, relation.AttributeNames, relation.AttributeTypes, relation.GetSizes()}
 
 	cells := relation.allCells()
@@ -56,22 +56,15 @@ func (relation *Relation) Summarize(size int) Relation {
 	cells.DebugPrint()
 
 	// we can only add a formula so we know it's going to be the one from the best cell
-	cell := *cells[0]
+	cell := cells[0]
 	formula := NewTupleFromCell(cell, summary.GetSizes())
-	formula.Cover = cell.Potential
-	summary.Tuples = append(summary.Tuples, formula)
+	summary.Tuples = append(summary.Tuples, &formula)
 	relation.IncreaseCounts(cell)
-
-	// only need the remaining cells
-	cells = cells[1:]
-
-	relation.PrintDebugString()
-
-	relation.IncreaseCounts(*cells[0])
 
 	relation.PrintDebugString()
 
 	for true {
+		// how much we can cover
 		bestPotential := 0
 		var bestCell *Cell
 
@@ -85,6 +78,7 @@ func (relation *Relation) Summarize(size int) Relation {
 				// TODO: we might already know the potential because it is calculated
 				potential := 0
 				for _, c := range cell.Attributes {
+					// count non-covered cells
 					if *c == 0 {
 						potential++
 					}
@@ -106,6 +100,38 @@ func (relation *Relation) Summarize(size int) Relation {
 						continue
 					}
 
+					// // sum up all
+					// potential := 0
+					// for _, tuple := range formula.Tuples {
+					// 	if tuple.Single[cell.Attribute].value == cell.Value {
+					// 		// tuple doesn't have conflict and we can cover new cell
+					// 		if *tuple.Single[cell.Attribute].covered == 0 {
+					// 			potential++
+					// 		}
+					// 	} else {
+					// 		// now we have a conflict
+					// 		for _, cell := range formula.Cells {
+					// 			switch cell.Type {
+					// 			case single:
+					//
+					// 			}
+					// 		}
+					// 	}
+					// }
+				}
+
+				// remove counts
+				for _, fCell := range formula.Cells {
+					relation.DecreaseCounts(fCell)
+				}
+
+				// how much can we cover if we add this formula again
+				for _, tuple := range relation.Tuples {
+					if tuple.Satisfies(newFormula) {
+						for _, fCell := range formula.Cells {
+
+						}
+					}
 				}
 			}
 		}
@@ -121,9 +147,16 @@ func (relation *Relation) Summarize(size int) Relation {
 }
 
 // IncreaseCounts increases the counts
-func (relation *Relation) IncreaseCounts(cell Cell) {
+func (relation *Relation) IncreaseCounts(cell *Cell) {
 	for _, counter := range cell.Attributes {
 		(*counter)++
+	}
+}
+
+// DecreaseCounts increases the counts
+func (relation *Relation) DecreaseCounts(cell *Cell) {
+	for _, counter := range cell.Attributes {
+		(*counter)--
 	}
 }
 

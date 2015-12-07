@@ -12,7 +12,11 @@ type Tuple struct {
 	Single    []*SingleValueAttribute
 	Set       []*SetAttribute
 	Hierarchy []*HierarchyAttribute
-	Cover     int // how many cells does this tuple as formula cover
+
+	// Formula
+	Cells  []*Cell
+	Tuples []*Tuple
+	Cover  int
 }
 
 // Satisfies is true if the tuple satisfies the formula (formula is subset)
@@ -60,11 +64,11 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 }
 
 // NewTupleFromCell creates a new tuple with only one cell
-func NewTupleFromCell(cell Cell, sizes Sizes) Tuple {
+func NewTupleFromCell(cell *Cell, sizes Sizes) Tuple {
 	singles := make([]*SingleValueAttribute, sizes.single)
 	sets := make([]*SetAttribute, sizes.set)
 	hierarchies := make([]*HierarchyAttribute, sizes.hierarchy)
-	tuple := Tuple{singles, sets, hierarchies, 0}
+	tuple := Tuple{singles, sets, hierarchies, []*Cell{cell}, cell.Tuples, 0}
 
 	switch cell.Type {
 	case single:
