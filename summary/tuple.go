@@ -63,6 +63,26 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 	return true
 }
 
+// SatisfiesCell is true the tuple satisfies the cell
+func (tuple *Tuple) SatisfiesCell(cell *Cell) bool {
+	switch cell.Type {
+	case single:
+		if tuple.Single[cell.Attribute] == nil {
+			return false
+		}
+		return tuple.Single[cell.Attribute].value == cell.Value
+	case set:
+		if tuple.Set[cell.Attribute] == nil {
+			return false
+		}
+		_, has := tuple.Set[cell.Attribute].values[cell.Value]
+		return has
+	default:
+		fmt.Println("TODO")
+		return false
+	}
+}
+
 // NewTupleFromCell creates a new tuple with only one cell
 func NewTupleFromCell(cell *Cell, sizes Sizes) Tuple {
 	singles := make([]*SingleValueAttribute, sizes.single)

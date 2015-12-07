@@ -126,10 +126,20 @@ func (relation *Relation) Summarize(size int) Relation {
 				}
 
 				// how much can we cover if we add this formula again
+				potential := 0
 				for _, tuple := range relation.Tuples {
-					if tuple.Satisfies(newFormula) {
+					if tuple.Satisfies(formula) && tuple.SatisfiesCell(cell) {
 						for _, fCell := range formula.Cells {
-
+							switch fCell.Type {
+							case single:
+								if *tuple.Single[fCell.Attribute].covered == 0 {
+									potential++
+								}
+							case set:
+								if *tuple.Set[fCell.Attribute].values[fCell.Value] == 0 {
+									potential++
+								}
+							}
 						}
 					}
 				}
