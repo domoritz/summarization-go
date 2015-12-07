@@ -16,7 +16,7 @@ type CellKey struct {
 type Cell struct {
 	CellKey
 	Potential  int
-	Attributes []Counter
+	Attributes []*Counter
 }
 
 type cellSlice []*Cell

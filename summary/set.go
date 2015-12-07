@@ -33,7 +33,7 @@ func (a *SetAttribute) Subset(other *SetAttribute) bool {
 func (a *SetAttribute) getDebugValues() []string {
 	values := make([]string, 0, len(a.values))
 	for value, count := range a.values {
-		values = append(values, fmt.Sprintf("%s (%d)", value, *count))
+		values = append(values, fmt.Sprintf("%s (%d)", value, count))
 	}
 	return values
 }

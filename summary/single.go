@@ -3,7 +3,7 @@ package summary
 import "fmt"
 
 // Counter counts the coverage
-type Counter *int
+type Counter int
 
 // SingleValueAttribute has a single value
 type SingleValueAttribute struct {
@@ -13,8 +13,7 @@ type SingleValueAttribute struct {
 
 // NewSingle creates a new SingleValueAttribute
 func NewSingle(value string) SingleValueAttribute {
-	c := 0
-	return SingleValueAttribute{value, &c}
+	return SingleValueAttribute{value, 0}
 }
 
 // Equal returns true if attribute satisfies the other attribute
@@ -27,5 +26,5 @@ func (attr *SingleValueAttribute) DebugString() string {
 	if attr == nil {
 		return "null"
 	}
-	return fmt.Sprintf("%s (%d)", attr.value, *attr.covered)
+	return fmt.Sprintf("%s (%d)", attr.value, attr.covered)
 }

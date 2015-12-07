@@ -70,8 +70,7 @@ func NewTupleFromCell(cell Cell, sizes Sizes) Tuple {
 		a := NewSingle(cell.Value)
 		tuple.Single[cell.Attribute] = &a
 	case set:
-		c := 0
-		a := NewSet(Set{cell.Value: &c})
+		a := NewSet(Set{cell.Value: 0})
 		tuple.Set[cell.Attribute] = &a
 	case hierarchy:
 		// TODO
@@ -104,8 +103,7 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 
 			setValue := make(Set)
 			for _, v := range setValues {
-				c := 0
-				setValue[v] = &c
+				setValue[v] = 0
 			}
 			a := NewSet(setValue)
 			tuple.Set = append(tuple.Set, &a)
@@ -140,10 +138,10 @@ func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
 			if ok {
 				// increase potential
 				cell.Potential++
-				cell.Attributes = append(cell.Attributes, attr.covered)
+				cell.Attributes = append(cell.Attributes, &attr.covered)
 			} else {
 				// add new cell
-				(*cells)[key] = &Cell{key, 1, []Counter{attr.covered}}
+				(*cells)[key] = &Cell{key, 1, []*Counter{&attr.covered}}
 			}
 		}
 	}
@@ -156,10 +154,10 @@ func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
 				if ok {
 					// increase potential
 					cell.Potential++
-					cell.Attributes = append(cell.Attributes, count)
+					cell.Attributes = append(cell.Attributes, &count)
 				} else {
 					// add new cell
-					(*cells)[key] = &Cell{key, 1, []Counter{count}}
+					(*cells)[key] = &Cell{key, 1, []*Counter{&count}}
 				}
 			}
 		}
