@@ -142,9 +142,10 @@ func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
 				// increase potential
 				cell.Potential++
 				cell.Attributes = append(cell.Attributes, attr.covered)
+				cell.Tuples = append(cell.Tuples, tuple)
 			} else {
 				// add new cell
-				(*cells)[key] = &Cell{key, 1, []Counter{attr.covered}}
+				(*cells)[key] = &Cell{key, 1, []Counter{attr.covered}, []*Tuple{tuple}}
 			}
 		}
 	}
@@ -158,9 +159,10 @@ func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
 					// increase potential
 					cell.Potential++
 					cell.Attributes = append(cell.Attributes, count)
+					cell.Tuples = append(cell.Tuples, tuple)
 				} else {
 					// add new cell
-					(*cells)[key] = &Cell{key, 1, []Counter{&count}, []*Tuple{tuple}}
+					(*cells)[key] = &Cell{key, 1, []Counter{count}, []*Tuple{tuple}}
 				}
 			}
 		}

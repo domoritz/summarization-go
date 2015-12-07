@@ -20,7 +20,7 @@ type Sizes struct {
 
 // Relation is a slice of tuples
 type Relation struct {
-	Tuples         []Tuple
+	Tuples         []*Tuple
 	AttributeNames []string
 	AttributeTypes []Type
 	attributeSizes Sizes
@@ -52,7 +52,7 @@ func (relation *Relation) GetSizes() Sizes {
 
 // NewRelationFromString creates a relation from a string
 func NewRelationFromString(description string) (*Relation, error) {
-	var tuples []Tuple
+	var tuples []*Tuple
 
 	lines := strings.Split(description, "\n")
 	typeNames := strings.Split(lines[0], ",")
@@ -82,7 +82,7 @@ func NewRelationFromString(description string) (*Relation, error) {
 		if err != nil {
 			return nil, err
 		}
-		tuples = append(tuples, tuple)
+		tuples = append(tuples, &tuple)
 	}
 
 	relation := Relation{tuples, names, types, sizes}
@@ -103,10 +103,13 @@ func (relation *Relation) PrintDebugString() {
 		names[i] = fmt.Sprintf("%s (%s)", relation.AttributeNames[i], relation.AttributeTypes[i])
 	}
 
+	names = append(names, "Address")
+
 	table.SetHeader(names)
 
 	for _, tuple := range relation.Tuples {
 		values := tuple.GetDebugStrings(relation.AttributeTypes)
+		values = append(values, fmt.Sprintf("%p", tuple))
 		table.Append(values)
 	}
 
