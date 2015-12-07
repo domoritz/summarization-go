@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/domoritz/summarization-go/summary"
@@ -11,8 +12,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	relation.PrintDebugString()
 
 	summary := relation.Summarize(1)
+
+	fmt.Println("Summary:")
 	summary.PrintDebugString()
 }

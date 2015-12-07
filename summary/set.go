@@ -3,11 +3,12 @@ package summary
 // SetAttribute has a set of values
 import (
 	"bytes"
+	"fmt"
 	"strings"
 )
 
-// Set is a set of values. The boolean value indicates whether the particular value is covered.
-type Set map[string]bool
+// Set is a set of values. The integer counts how often the value has been covered.
+type Set map[string]Counter
 
 // SetAttribute is a set attribute
 type SetAttribute struct {
@@ -19,28 +20,22 @@ func NewSet(value Set) SetAttribute {
 	return SetAttribute{value}
 }
 
-// SubsetCover returns true if attribute is subset of other attribute. If a is a subset of other, also returns the count of new covers.
-func (a *SetAttribute) SubsetCover(other *SetAttribute) (bool, int) {
-	cover := 0
+// Subset returns true if attribute is subset of other attribute
+func (a *SetAttribute) Subset(other *SetAttribute) bool {
 	for value := range a.values {
-		if covered, has := other.values[value]; has {
-			if !covered {
-				cover++
-			}
-		} else {
-			return false, -1
+		if _, has := other.values[value]; !has {
+			return false
 		}
-
 	}
-	return true, cover
+	return true
 }
 
-func (a *SetAttribute) getValues() []string {
-	keys := make([]string, 0, len(a.values))
-	for k := range a.values {
-		keys = append(keys, k)
+func (a *SetAttribute) getDebugValues() []string {
+	values := make([]string, 0, len(a.values))
+	for value, count := range a.values {
+		values = append(values, fmt.Sprintf("%s (%d)", value, *count))
 	}
-	return keys
+	return values
 }
 
 // DebugString prints the attribute name and value
@@ -51,7 +46,7 @@ func (a *SetAttribute) DebugString() string {
 
 	var buffer bytes.Buffer
 	buffer.WriteString("{")
-	buffer.WriteString(strings.Join(a.getValues(), " "))
+	buffer.WriteString(strings.Join(a.getDebugValues(), " "))
 	buffer.WriteString("}")
 	return buffer.String()
 }

@@ -1,25 +1,31 @@
 package summary
 
+import "fmt"
+
+// Counter counts the coverage
+type Counter *int
+
 // SingleValueAttribute has a single value
 type SingleValueAttribute struct {
 	value   string
-	covered bool
+	covered Counter
 }
 
 // NewSingle creates a new SingleValueAttribute
 func NewSingle(value string) SingleValueAttribute {
-	return SingleValueAttribute{value, false}
+	c := 0
+	return SingleValueAttribute{value, &c}
 }
 
 // Equal returns true if attribute satisfies the other attribute
-func (a *SingleValueAttribute) Equal(other *SingleValueAttribute) bool {
-	return a.value == other.value
+func (attr *SingleValueAttribute) Equal(other *SingleValueAttribute) bool {
+	return attr.value == other.value
 }
 
 // DebugString prints the attribute name and value
-func (a *SingleValueAttribute) DebugString() string {
-	if a == nil {
+func (attr *SingleValueAttribute) DebugString() string {
+	if attr == nil {
 		return "null"
 	}
-	return a.value
+	return fmt.Sprintf("%s (%d)", attr.value, *attr.covered)
 }

@@ -2,24 +2,24 @@ package summary
 
 import "testing"
 
-func TestCoverage(t *testing.T) {
+func TestSatisfies(t *testing.T) {
 	a, _ := NewTupleFromString("a,a,a b", []Type{single, set, hierarchy})
 	b, _ := NewTupleFromString("a,a b,a b c", []Type{single, set, hierarchy})
 
-	if ok, size := a.Coverage(&a); !ok || size != 4 {
+	if !a.Satisfies(&a) {
 		t.Error("Should satisfy")
 	}
 
-	if ok, size := b.Coverage(&a); !ok || size != 4 {
+	if !b.Satisfies(&a) {
 		t.Error("Should satisfy")
 	}
 
-	if ok, _ := a.Coverage(&b); ok {
+	if a.Satisfies(&b) {
 		t.Error("Should not satisfy")
 	}
 }
 
-func TestCoverageNulls(t *testing.T) {
+func TestSatisfiesNulls(t *testing.T) {
 	validSingle, _ := NewTupleFromString("a", []Type{single})
 	nullSingle, _ := NewTupleFromString("", []Type{single})
 
@@ -30,35 +30,35 @@ func TestCoverageNulls(t *testing.T) {
 	nullHierarchy, _ := NewTupleFromString("", []Type{hierarchy})
 
 	// both null should be satisfied
-	if ok, size := nullSingle.Coverage(&nullSingle); !ok || size != 0 {
+	if !nullSingle.Satisfies(&nullSingle) {
 		t.Error("Should satisfy")
 	}
-	if ok, size := nullSet.Coverage(&nullSet); !ok || size != 0 {
+	if !nullSet.Satisfies(&nullSet) {
 		t.Error("Should satisfy")
 	}
-	if ok, size := nullHierarchy.Coverage(&nullHierarchy); !ok || size != 0 {
+	if !nullHierarchy.Satisfies(&nullHierarchy) {
 		t.Error("Should satisfy")
 	}
 
 	// tuple should always satisfy empty formula
-	if ok, size := validSingle.Coverage(&nullSingle); !ok || size != 0 {
+	if !validSingle.Satisfies(&nullSingle) {
 		t.Error("Should satisfy")
 	}
-	if ok, size := validSet.Coverage(&nullSet); !ok || size != 0 {
+	if !validSet.Satisfies(&nullSet) {
 		t.Error("Should satisfy")
 	}
-	if ok, size := validHierarchy.Coverage(&nullHierarchy); !ok || size != 0 {
+	if !validHierarchy.Satisfies(&nullHierarchy) {
 		t.Error("Should satisfy")
 	}
 
 	// null tuple should never satisfy formula with value
-	if ok, _ := nullSingle.Coverage(&validSingle); ok {
+	if nullSingle.Satisfies(&validSingle) {
 		t.Error("Should not satisfy")
 	}
-	if ok, _ := nullSet.Coverage(&validSet); ok {
+	if nullSet.Satisfies(&validSet) {
 		t.Error("Should not satisfy")
 	}
-	if ok, _ := nullHierarchy.Coverage(&validHierarchy); ok {
+	if nullHierarchy.Satisfies(&validHierarchy) {
 		t.Error("Should not satisfy")
 	}
 }

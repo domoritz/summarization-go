@@ -15,7 +15,8 @@ type CellKey struct {
 // Cell is a cell
 type Cell struct {
 	CellKey
-	Potential int
+	Potential  int
+	Attributes []Counter
 }
 
 type cellSlice []*Cell
@@ -53,24 +54,41 @@ func (relation *Relation) Summarize(size int) Relation {
 
 	cells.DebugPrint()
 
-	summary.Tuples = append(summary.Tuples, NewTupleFromCell(*cells[0], summary.GetSizes()))
+	// we can only add a formula so we know it's going to be the one from the best cell
+	cell := *cells[0]
+	formula := NewTupleFromCell(cell, summary.GetSizes())
+	summary.Tuples = append(summary.Tuples, formula)
+	relation.IncreaseCounts(cell)
+
 	cells = cells[1:]
 
-	for true {
-		for _, cell := range cells {
-			// TODO: check potential
+	relation.PrintDebugString()
 
-			if len(summary.Tuples) < size {
-				// try new formula
-				formula := NewTupleFromCell(*cell, summary.GetSizes())
-				coverage := relation.Coverage(&formula)
-			}
-
-		}
-		break
-	}
+	// for true {
+	// 	for _, cell := range cells {
+	// 		// TODO: check potential
+	//
+	// 		if len(summary.Tuples) < size {
+	// 			// try new formula and see how much of uncovered space it can cover
+	// 			formula := NewTupleFromCell(*cell, summary.GetSizes())
+	// 		}
+	//
+	// 		// try adding to existing formula and see how it changes coverage
+	// 		for i, existing := range summary.Tuples {
+	// 		}
+	//
+	// 	}
+	// 	break
+	// }
 
 	return summary
+}
+
+// IncreaseCounts increases the counts
+func (relation *Relation) IncreaseCounts(cell Cell) {
+	for _, counter := range cell.Attributes {
+		(*counter)++
+	}
 }
 
 // returns all cells with potential

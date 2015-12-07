@@ -50,20 +50,6 @@ func (relation *Relation) GetSizes() Sizes {
 	return relation.attributeSizes
 }
 
-// Coverage calculates how much more a formula can cover
-func (relation *Relation) Coverage(formula *Tuple) int {
-	coverage := 0
-
-	for _, tuple := range relation.Tuples {
-		satisfies, cover := tuple.Coverage(formula)
-		if satisfies {
-			coverage += cover
-		}
-	}
-
-	return coverage
-}
-
 // NewRelationFromString creates a relation from a string
 func NewRelationFromString(description string) (*Relation, error) {
 	var tuples []Tuple
@@ -104,8 +90,7 @@ func NewRelationFromString(description string) (*Relation, error) {
 	return &relation, nil
 }
 
-// NumAttributes returns the number of attributes
-func (relation *Relation) NumAttributes() int {
+func (relation *Relation) numAttributes() int {
 	return len(relation.AttributeTypes)
 }
 
@@ -113,8 +98,8 @@ func (relation *Relation) NumAttributes() int {
 func (relation *Relation) PrintDebugString() {
 	table := tablewriter.NewWriter(os.Stdout)
 
-	names := make([]string, len(relation.AttributeNames))
-	for i := 0; i < relation.NumAttributes(); i++ {
+	names := make([]string, relation.numAttributes())
+	for i := 0; i < relation.numAttributes(); i++ {
 		names[i] = fmt.Sprintf("%s (%s)", relation.AttributeNames[i], relation.AttributeTypes[i])
 	}
 
