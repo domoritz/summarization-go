@@ -58,6 +58,25 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 	return true
 }
 
+// AddCell adds a cell to this tuple
+// TODO: make formula
+func (tuple *Tuple) AddCell(cell Cell) {
+	switch cell.Type {
+	case single:
+		s := NewSingle(cell.Value)
+		tuple.Single[cell.Attribute] = &s
+	case set:
+		attr := tuple.Set[cell.Attribute]
+		if attr == nil {
+			s := NewSet([]string{cell.Value})
+			tuple.Set[cell.Attribute] = &s
+		} else {
+			c := false
+			(*attr)[cell.Value] = &c
+		}
+	}
+}
+
 // NewTupleFromCell creates a new tuple with only one cell
 func NewTupleFromCell(cell Cell, sizes Sizes) Tuple {
 	singles := make([]*SingleValueAttribute, sizes.single)

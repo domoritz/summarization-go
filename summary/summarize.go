@@ -47,29 +47,43 @@ func (cells cellSlice) DebugPrint() {
 
 // Summarize returns a summary of the relation
 func (relation Relation) Summarize(size int) Relation {
-	var tuples []*Tuple
-	summary := Relation{tuples, relation.AttributeNames, relation.AttributeTypes, relation.GetSizes()}
-
-	cells := relation.allCells()
-	sort.Sort(cells)
-
-	cells.DebugPrint()
-
-	{
-		// we can only add a formula so we know it's going to be the one from the best cell
-		cell := cells[0]
-		formula := NewTupleFromCell(cell, summary.GetSizes())
-		summary.Tuples = append(summary.Tuples, &formula)
-		relation.SetToCovered(cell)
+	summary := Relation{
+		make([]*Tuple, 0),
+		relation.AttributeNames,
+		relation.AttributeTypes,
+		relation.GetSizes(),
 	}
 
-	relation.PrintDebugString()
+	mainCells := allCells(relation.Tuples)
+	sort.Sort(mainCells)
+	mainCells.DebugPrint()
 
-	for true {
+	for len(summary.Tuples) < size {
+		// add a new formula
+		firstCell := mainCells[0]
+		formula := NewTupleFromCell(firstCell, summary.GetSizes())
+		summary.Tuples = append(summary.Tuples, &formula)
+		SetToCovered(firstCell)
+		tuples := firstCell.Tuples
+
+		relation.PrintDebugString()
+
+		// the cells that are relevant for the current set of tuples
+		cells := allCells(tuples)
+		sort.Sort(cells)
+
+		// the second cell is in the subset
+		secondCell := cells[0]
+		formula.AddCell(secondCell)
+		SetToCovered(secondCell)
+
+		// cannot add the currently best cell anyway
+		cells = cells[1:]
+
+		cell = cells.findBestCell(tuples)
 
 		// TODO: No need to update potential if we add a single
-
-		sort.Sort(cells)
+		sort.Sort(mainCells)
 
 		break
 	}
@@ -77,8 +91,21 @@ func (relation Relation) Summarize(size int) Relation {
 	return summary
 }
 
+func (cells cellSlice) findBestCell(tuples []Tuple) Cell {
+	bestCover := 0
+	var bestCell Cell
+	for _, cell := range cells {
+		if cell.Potential < bestCover {
+			bestCell = cell
+			break
+		}
+
+	}
+	return bestCell
+}
+
 // SetToCovered sets to covered
-func (relation Relation) SetToCovered(cell Cell) {
+func SetToCovered(cell Cell) {
 	for _, covered := range cell.Attributes {
 		*covered = true
 	}
@@ -88,11 +115,10 @@ func (c Cell) String() string {
 	return fmt.Sprintf("{%s %d %s (%d)}", c.Type, c.Attribute, c.Value, c.Potential)
 }
 
-// returns all cells with potential
-func (relation *Relation) allCells() cellSlice {
+func allCells(tuples []*Tuple) cellSlice {
 	cells := make(map[CellKey]*Cell)
 
-	for _, tuple := range relation.Tuples {
+	for _, tuple := range tuples {
 		tuple.AddCells(&cells)
 	}
 
