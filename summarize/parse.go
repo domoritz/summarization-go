@@ -7,7 +7,7 @@ import (
 )
 
 // NewIndexFromString creates a relation index from a string
-func NewIndexFromString(description string) (RelationIndex, error) {
+func NewIndexFromString(description string) (*RelationIndex, error) {
 	lines := strings.Split(description, "\n")
 
 	typeNames := strings.Split(lines[0], ",")
@@ -20,7 +20,7 @@ func NewIndexFromString(description string) (RelationIndex, error) {
 
 	numAttr := len(typeNames)
 
-	index := make(RelationIndex, numAttr)
+	index := make([]Attribute, numAttr)
 
 	for i, typeName := range typeNames {
 		typeName = strings.TrimSpace(typeName)
@@ -33,8 +33,10 @@ func NewIndexFromString(description string) (RelationIndex, error) {
 			index[i].attributeType = hierarchy
 		}
 		index[i].name = names[i]
-		index[i].coveredTuples = make(map[string]cell)
+		index[i].tuples = make(map[string]TupleCover)
 	}
+
+	numTuples := len(lines[2:])
 
 	for tuple, line := range lines[2:] {
 		values := strings.Split(line, ",")
@@ -54,22 +56,22 @@ func NewIndexFromString(description string) (RelationIndex, error) {
 
 			switch attr.attributeType {
 			case single:
-				if cell, has := attr.coveredTuples[value]; !has {
-					newCell := make(map[int]bool)
-					newCell[tuple] = false
-					attr.coveredTuples[value] = newCell
+				if tc, has := attr.tuples[value]; !has {
+					c := make(TupleCover)
+					c[tuple] = false
+					attr.tuples[value] = c
 				} else {
-					cell[tuple] = false
+					tc[tuple] = false
 				}
 			case set:
 				setValues := strings.Split(value, " ")
 				for _, setValue := range setValues {
-					if cell, has := attr.coveredTuples[setValue]; !has {
-						newCell := make(map[int]bool)
-						newCell[tuple] = false
-						attr.coveredTuples[setValue] = newCell
+					if tc, has := attr.tuples[setValue]; !has {
+						c := make(TupleCover)
+						c[tuple] = false
+						attr.tuples[setValue] = c
 					} else {
-						cell[tuple] = false
+						tc[tuple] = false
 					}
 				}
 			case hierarchy:
@@ -77,17 +79,17 @@ func NewIndexFromString(description string) (RelationIndex, error) {
 				hValues := strings.Split(value, " ")
 				for _, hValue := range hValues {
 					prefix += hValue
-					if cell, has := attr.coveredTuples[prefix]; !has {
-						newCell := make(map[int]bool)
-						newCell[tuple] = false
-						attr.coveredTuples[prefix] = newCell
+					if tc, has := attr.tuples[prefix]; !has {
+						c := make(TupleCover)
+						c[tuple] = false
+						attr.tuples[prefix] = c
 					} else {
-						cell[tuple] = false
+						tc[tuple] = false
 					}
 				}
 			}
 		}
 	}
 
-	return index, nil
+	return &RelationIndex{index, numTuples}, nil
 }
