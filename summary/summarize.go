@@ -55,8 +55,6 @@ func (relation Relation) Summarize(size int) Relation {
 
 	cells.DebugPrint()
 
-	fmt.Println(cells)
-
 	{
 		// we can only add a formula so we know it's going to be the one from the best cell
 		cell := cells[0]

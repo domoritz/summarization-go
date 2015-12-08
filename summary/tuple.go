@@ -15,7 +15,7 @@ type Tuple struct {
 }
 
 // Satisfies is true if the tuple satisfies the formula (formula is subset)
-func (tuple Tuple) Satisfies(formula Tuple) bool {
+func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 	for i, attr := range tuple.Single {
 		if formula.Single[i] == nil {
 			continue
