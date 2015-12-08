@@ -80,7 +80,7 @@ func (relation Relation) Summarize(size int) Relation {
 		// cannot add the currently best cell anyway
 		cells = cells[1:]
 
-		cell = cells.findBestCell(tuples)
+		// cell := cells.findBestCell(tuples)
 
 		// TODO: No need to update potential if we add a single
 		sort.Sort(mainCells)
