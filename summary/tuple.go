@@ -12,14 +12,10 @@ type Tuple struct {
 	Single    []*SingleValueAttribute
 	Set       []*SetAttribute
 	Hierarchy []*HierarchyAttribute
-
-	// Formula
-	Cells  []*Cell
-	Tuples []*Tuple
 }
 
 // Satisfies is true if the tuple satisfies the formula (formula is subset)
-func (tuple *Tuple) Satisfies(formula *Tuple) bool {
+func (tuple Tuple) Satisfies(formula Tuple) bool {
 	for i, attr := range tuple.Single {
 		if formula.Single[i] == nil {
 			continue
@@ -28,7 +24,7 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 			return false
 		}
 
-		if !formula.Single[i].Equal(attr) {
+		if !formula.Single[i].Equal(*attr) {
 			return false
 		}
 	}
@@ -41,7 +37,7 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 			return false
 		}
 
-		if !formula.Set[i].Subset(attr) {
+		if !formula.Set[i].Subset(*attr) {
 			return false
 		}
 	}
@@ -54,7 +50,7 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 			return false
 		}
 
-		if !formula.Hierarchy[i].Prefix(attr) {
+		if !formula.Hierarchy[i].Prefix(*attr) {
 			return false
 		}
 	}
@@ -62,40 +58,20 @@ func (tuple *Tuple) Satisfies(formula *Tuple) bool {
 	return true
 }
 
-// SatisfiesCell is true the tuple satisfies the cell
-func (tuple *Tuple) SatisfiesCell(cell *Cell) bool {
-	switch cell.Type {
-	case single:
-		if tuple.Single[cell.Attribute] == nil {
-			return false
-		}
-		return tuple.Single[cell.Attribute].value == cell.Value
-	case set:
-		if tuple.Set[cell.Attribute] == nil {
-			return false
-		}
-		_, has := tuple.Set[cell.Attribute].values[cell.Value]
-		return has
-	default:
-		fmt.Println("TODO")
-		return false
-	}
-}
-
 // NewTupleFromCell creates a new tuple with only one cell
-func NewTupleFromCell(cell *Cell, sizes Sizes) Tuple {
+func NewTupleFromCell(cell Cell, sizes Sizes) Tuple {
 	singles := make([]*SingleValueAttribute, sizes.single)
 	sets := make([]*SetAttribute, sizes.set)
 	hierarchies := make([]*HierarchyAttribute, sizes.hierarchy)
-	tuple := Tuple{singles, sets, hierarchies, []*Cell{cell}, cell.Tuples}
+	tuple := Tuple{singles, sets, hierarchies}
 
 	switch cell.Type {
 	case single:
 		a := NewSingle(cell.Value)
 		tuple.Single[cell.Attribute] = &a
 	case set:
-		c := 0
-		a := NewSet(Set{cell.Value: &c})
+		c := false
+		a := SetAttribute{cell.Value: &c}
 		tuple.Set[cell.Attribute] = &a
 	case hierarchy:
 		// TODO
@@ -125,13 +101,7 @@ func NewTupleFromString(description string, types []Type) (Tuple, error) {
 			}
 
 			setValues := strings.Split(value, " ")
-
-			setValue := make(Set)
-			for _, v := range setValues {
-				c := 0
-				setValue[v] = &c
-			}
-			a := NewSet(setValue)
+			a := NewSet(setValues)
 			tuple.Set = append(tuple.Set, &a)
 		case single:
 			if len(value) == 0 {
@@ -168,14 +138,14 @@ func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
 				cell.Tuples = append(cell.Tuples, tuple)
 			} else {
 				// add new cell
-				(*cells)[key] = &Cell{key, 1, []Counter{attr.covered}, []*Tuple{tuple}}
+				(*cells)[key] = &Cell{key, 1, []*bool{attr.covered}, []*Tuple{tuple}}
 			}
 		}
 	}
 
 	for i, attr := range tuple.Set {
 		if attr != nil {
-			for value, count := range attr.values {
+			for value, count := range *attr {
 				key := CellKey{set, i, value}
 				cell, ok := (*cells)[key]
 				if ok {
@@ -185,7 +155,7 @@ func (tuple *Tuple) AddCells(cells *map[CellKey]*Cell) {
 					cell.Tuples = append(cell.Tuples, tuple)
 				} else {
 					// add new cell
-					(*cells)[key] = &Cell{key, 1, []Counter{count}, []*Tuple{tuple}}
+					(*cells)[key] = &Cell{key, 1, []*bool{count}, []*Tuple{tuple}}
 				}
 			}
 		}

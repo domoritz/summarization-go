@@ -12,21 +12,22 @@ type Hierarchy []string
 // HierarchyAttribute is hierarchical
 type HierarchyAttribute struct {
 	hierarchy Hierarchy
-	// TODO: add counts
+	covered   *bool
 }
 
 // NewHierachy creates a new hierarchical attribute
 func NewHierachy(hierarchy Hierarchy) HierarchyAttribute {
-	return HierarchyAttribute{hierarchy}
+	covered := false
+	return HierarchyAttribute{hierarchy, &covered}
 }
 
 // Prefix returns true if attribute is prefix of other attribute
-func (a *HierarchyAttribute) Prefix(other *HierarchyAttribute) bool {
-	if len(a.hierarchy) > len(other.hierarchy) {
+func (attr HierarchyAttribute) Prefix(other HierarchyAttribute) bool {
+	if len(attr.hierarchy) > len(other.hierarchy) {
 		return false
 	}
 
-	for i, value := range a.hierarchy {
+	for i, value := range attr.hierarchy {
 		if other.hierarchy[i] != value {
 			return false
 		}
@@ -35,14 +36,14 @@ func (a *HierarchyAttribute) Prefix(other *HierarchyAttribute) bool {
 }
 
 // DebugString prints the attribute name and value
-func (a *HierarchyAttribute) DebugString() string {
-	if a == nil {
+func (attr *HierarchyAttribute) DebugString() string {
+	if attr == nil {
 		return "null"
 	}
 
 	var buffer bytes.Buffer
 	buffer.WriteString("[")
-	buffer.WriteString(strings.Join(a.hierarchy, " "))
+	buffer.WriteString(strings.Join(attr.hierarchy, " "))
 	buffer.WriteString("]")
 	return buffer.String()
 }

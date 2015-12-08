@@ -11,6 +11,12 @@ import (
 // Type is the attribute type
 type Type int
 
+const (
+	single Type = iota
+	set
+	hierarchy
+)
+
 // Sizes gives us the size of the attribute lists
 type Sizes struct {
 	single    int
@@ -26,12 +32,6 @@ type Relation struct {
 	attributeSizes Sizes
 }
 
-const (
-	single Type = iota
-	set
-	hierarchy
-)
-
 func (t Type) String() string {
 	switch t {
 	case single:
@@ -46,7 +46,7 @@ func (t Type) String() string {
 }
 
 // GetSizes gets the attribute sizes of the relation used to initialize tuples
-func (relation *Relation) GetSizes() Sizes {
+func (relation Relation) GetSizes() Sizes {
 	return relation.attributeSizes
 }
 

@@ -2,23 +2,20 @@ package summary
 
 import "fmt"
 
-// Counter counts the coverage
-type Counter *int
-
 // SingleValueAttribute has a single value
 type SingleValueAttribute struct {
 	value   string
-	covered Counter
+	covered *bool
 }
 
 // NewSingle creates a new SingleValueAttribute
 func NewSingle(value string) SingleValueAttribute {
-	c := 0
-	return SingleValueAttribute{value, &c}
+	covered := false
+	return SingleValueAttribute{value, &covered}
 }
 
 // Equal returns true if attribute satisfies the other attribute
-func (attr *SingleValueAttribute) Equal(other *SingleValueAttribute) bool {
+func (attr SingleValueAttribute) Equal(other SingleValueAttribute) bool {
 	return attr.value == other.value
 }
 
@@ -27,5 +24,5 @@ func (attr *SingleValueAttribute) DebugString() string {
 	if attr == nil {
 		return "null"
 	}
-	return fmt.Sprintf("%s (%d)", attr.value, *attr.covered)
+	return fmt.Sprintf("%s (%t)", attr.value, *attr.covered)
 }
