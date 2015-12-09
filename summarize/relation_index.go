@@ -9,9 +9,9 @@ import (
 
 // Attribute is an attribute
 type Attribute struct {
+	index         int                    // a number for this attribute
 	attributeType Type                   // attribute type
 	name          string                 // attribute name
-	index         int                    // a number for this attribute
 	tuples        map[string]*TupleCover // TODO: make slice
 }
 

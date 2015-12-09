@@ -6,16 +6,19 @@ import (
 	"log"
 	"os"
 	"sort"
+
+	"golang.org/x/tools/container/intsets"
 )
 
 var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
+var dbg = log.New(os.Stdout, "DEBUG: ", log.Lshortfile)
 
 // TupleCover is a map from tuple index to whether it is covered or not
 type TupleCover map[int]bool
 
 type tupleCover []int
 
-// Formula is a map from attribute to lists of cells
+// Formula is a map from attribute id to lists of cells
 type Formula map[int][]Cell // TODO
 
 // Summary is a summary
@@ -23,10 +26,12 @@ type Summary []Formula
 
 func makeRankedCells(relation RelationIndex) CellPointers {
 	rankedCells := make(CellPointers, 0, relation.numValues)
+	uid := 0
 	for i, attr := range relation.attrs {
 		for value, cover := range attr.tuples {
-			cell := Cell{&relation.attrs[i], value, cover, len(*cover), 0}
+			cell := Cell{uid, &relation.attrs[i], value, cover, len(*cover), 0}
 			rankedCells = append(rankedCells, &cell)
+			uid++
 		}
 	}
 	return rankedCells
@@ -69,7 +74,7 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	rankedCells := makeRankedCells(relation)
 	sort.Sort(rankedCells)
 
-	info.Println("Initial ranking")
+	dbg.Println("Initial ranking")
 	fmt.Println(rankedCells)
 
 	for len(summary) < size {
@@ -77,7 +82,7 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		cell := getBestCell(rankedCells)
 
 		if cell.potential < 0 {
-			log.Println("Adding a new cell to the formula doesn't help. Let's stop right here.")
+			info.Println("Adding a new cell to the formula doesn't help. Let's stop right here.")
 			break
 		}
 
@@ -95,13 +100,16 @@ func (relation RelationIndex) Summarize(size int) Summary {
 			tuplesInFormula.Add(tuple)
 		}
 
-		info.Printf("Just added a new formula with cell %s, here is the tuple cover\n", cell)
+		dbg.Printf("Just added a new formula with cell %s, here is the tuple cover\n", cell)
 		fmt.Println(theTupleCover)
 
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellPointers has pointers so we can safely modify the slice but not the cells it points to
 		formulaRankedCells := make(CellPointers, len(rankedCells))
 		copy(formulaRankedCells, rankedCells)
+
+		// which cells to skip in formulaRankedCells, should be reset for each formula
+		var skipTheseCells intsets.Sparse
 
 		// keep adding to formula
 		for true {
@@ -111,10 +119,15 @@ func (relation RelationIndex) Summarize(size int) Summary {
 			bestDiff := 0
 
 			for _, cell := range formulaRankedCells {
+				if skipTheseCells.Has(cell.uid) {
+					dbg.Println("Skipping cell")
+				}
+
 				if cell.attribute.attributeType == single && len(formula[cell.attribute.index]) > 0 {
 					// the formula already has a value assigned to this attribute
 					// todo: cound delete here
-					info.Println("Ignoring single attribute cell", cell)
+					dbg.Println("Ignoring single attribute cell", cell)
+					skipTheseCells.Insert(cell.uid)
 					continue
 				}
 
@@ -141,11 +154,16 @@ func (relation RelationIndex) Summarize(size int) Summary {
 				}
 			}
 
+			break
+
 			if bestDiff == 0 {
 				// we could not improve the coverage so let's give up
 				info.Println("Looks like we cannot find a cell that should be added")
 				break
 			}
+
+			skipTheseCells.Insert(bestCell.uid)
+			dbg.Printf("Now skipping %d cells\n", skipTheseCells.Len())
 
 			// add cell to formula
 			idx := bestCell.attribute.index
@@ -160,12 +178,10 @@ func (relation RelationIndex) Summarize(size int) Summary {
 				}
 			}
 
-			info.Println("Relevant tuples:", tuplesInFormula)
+			dbg.Println("Relevant tuples:", tuplesInFormula)
 
 			info.Printf("Just added a new cell (%s) to the formula\n", bestCell)
 			fmt.Println(theTupleCover)
-
-			break
 		}
 
 		// update the cover so that in the next iteration the same tuples are not covered again

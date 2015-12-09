@@ -7,6 +7,7 @@ import (
 
 // Cell is a cell
 type Cell struct {
+	uid       int         // unique id for cell
 	attribute *Attribute  // attribute
 	value     string      // attribute value
 	cover     *TupleCover // what the attribute covers
