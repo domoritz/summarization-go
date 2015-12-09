@@ -3,6 +3,8 @@ package summarize
 import (
 	"bytes"
 	"fmt"
+
+	"golang.org/x/tools/container/intsets"
 )
 
 // TupleValues gives us the value for each tuple
@@ -13,10 +15,11 @@ type Formula struct {
 	cells                CellPointers // list of cells
 	tupleValue           TupleValues  // how much does a tuple contribute to the formula
 	usedSingleAttributes Set          // which single attributes are already used
+	skipTheseCells       intsets.Sparse
 }
 
 // NewFormula creates a new formula from a cell
-func NewFormula(cell *Cell) Formula {
+func NewFormula(cell *Cell) *Formula {
 	var formula Formula
 
 	formula.usedSingleAttributes = make(Set)
@@ -32,11 +35,13 @@ func NewFormula(cell *Cell) Formula {
 
 	formula.addCellNoUpdateValues(cell)
 
-	return formula
+	return &formula
 }
 
 func (formula *Formula) addCellNoUpdateValues(cell *Cell) {
 	formula.cells = append(formula.cells, cell)
+
+	formula.skipTheseCells.Insert(cell.uid)
 
 	// if the cell is a single, add attribute to exclude list
 	if cell.attribute.attributeType == single {

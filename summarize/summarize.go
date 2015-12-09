@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"golang.org/x/tools/container/intsets"
 )
 
 var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
@@ -22,7 +20,7 @@ type Value struct {
 // Summary is a summary
 type Summary [][]Value
 
-func makeRankedCells(relation RelationIndex) *CellPointers {
+func makeRankedCells(relation RelationIndex) CellPointers {
 	rankedCells := make(CellPointers, 0, relation.numValues)
 	uid := 0
 	for i, attr := range relation.attrs {
@@ -32,7 +30,7 @@ func makeRankedCells(relation RelationIndex) *CellPointers {
 			uid++
 		}
 	}
-	return &rankedCells
+	return rankedCells
 }
 
 // returns the best cell form a list of cells with potentials
@@ -55,14 +53,14 @@ func getBestCell(cellHeap *CellPointers) *Cell {
 
 // returns nil if no cell could be found that improves the formula
 // requires cells to be a heap
-func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTheseCells *intsets.Sparse) *Cell {
+func getBestFormulaCell(formulaRankedCells *CellPointers, formula *Formula) *Cell {
 	// the best improvement in coverage for any cell
 	bestDiff := 0
 
 	var bestCell *Cell
 
-	for _, cell := range formulaRankedCells {
-		if skipTheseCells.Has(cell.uid) {
+	for _, cell := range *formulaRankedCells {
+		if formula.skipTheseCells.Has(cell.uid) {
 			dbg.Println("Skipping cell")
 			continue
 		}
@@ -71,7 +69,7 @@ func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTh
 			// the formula already has a value assigned to this attribute
 			// todo: cound delete here
 			dbg.Println("Ignoring single attribute cell", cell)
-			skipTheseCells.Insert(cell.uid)
+			formula.skipTheseCells.Insert(cell.uid)
 			continue
 		}
 
@@ -118,7 +116,7 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	var summary Summary
 
 	rankedCells := makeRankedCells(relation)
-	heap.Init(rankedCells)
+	heap.Init(&rankedCells)
 
 	dbg.Println("Initial ranking")
 	fmt.Println(rankedCells)
@@ -127,7 +125,7 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		fmt.Println("==============================")
 
 		// add new formula with best cell
-		cell := getBestCell(rankedCells)
+		cell := getBestCell(&rankedCells)
 
 		if cell.potential < 0 {
 			info.Println("Adding a new cell to the formula doesn't help. Let's stop right here.")
@@ -141,26 +139,20 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellPointers has pointers so we can safely modify the slice but not the cells it points to
-		formulaRankedCells := make(CellPointers, len(*rankedCells))
-		copy(formulaRankedCells, *rankedCells)
-
-		// which cells to skip in formulaRankedCells, should be reset for each formula
-		var skipTheseCells intsets.Sparse
+		formulaRankedCells := make(CellPointers, len(rankedCells))
+		copy(formulaRankedCells, rankedCells)
 
 		// keep adding to formula
 		for true {
 			fmt.Println("--------------------------------")
 
-			bestCell := getBestFormulaCell(formulaRankedCells, formula, &skipTheseCells)
+			bestCell := getBestFormulaCell(&formulaRankedCells, formula)
 
 			if bestCell == nil {
 				break
 			}
 
-			// we should skip the best cell in the next iteration
-			skipTheseCells.Insert(bestCell.uid)
-
-			dbg.Printf("Now skipping %d cells\n", skipTheseCells.Len())
+			dbg.Printf("Now skipping %d cells\n", formula.skipTheseCells.Len())
 
 			// add cell to formula
 			formula.AddCell(bestCell)
