@@ -11,6 +11,7 @@ import (
 type Attribute struct {
 	attributeType Type                   // attribute type
 	name          string                 // attribute name
+	index         int                    // a number for this attribute
 	tuples        map[string]*TupleCover // TODO: make slice
 }
 
@@ -47,7 +48,9 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 		case hierarchy.String():
 			index[i].attributeType = hierarchy
 		}
+
 		index[i].name = names[i]
+		index[i].index = i
 		index[i].tuples = make(map[string]*TupleCover)
 	}
 
@@ -118,10 +121,10 @@ func (relation RelationIndex) String() string {
 	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples, %d values):\n", len(relation.attrs), relation.numTuples, relation.numValues))
 	for _, attribute := range relation.attrs {
 		buffer.WriteString(fmt.Sprintf("Attribute %s (%s):\n", attribute.name, attribute.attributeType))
-		for value, cell := range attribute.tuples {
+		for value, cover := range attribute.tuples {
 			buffer.WriteString(fmt.Sprintf("Value %s covers: [", value))
 			var tuples []string
-			for tuple, covered := range *cell {
+			for tuple, covered := range *cover {
 				tuples = append(tuples, fmt.Sprintf("%d: %s", tuple, bString(covered)))
 			}
 

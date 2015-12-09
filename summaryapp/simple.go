@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	relation, err := summarize.NewIndexFromString("single,single,set\nx,y,z\n0,1,2 3\n0,1,2\n0,1,2\n1,,3 4 5\n0,1,2 4\n0,0,")
+	relation, err := summarize.NewIndexFromString("single,single,set\nx,y,z\na,b,c d\na,b,c\na,b,c\nb,,d 4 5\na,b,c e\na,a,")
 	if err != nil {
 		log.Fatal(err)
 	}

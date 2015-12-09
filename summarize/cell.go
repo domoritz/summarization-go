@@ -3,31 +3,33 @@ package summarize
 import (
 	"bytes"
 	"fmt"
-	"sort"
 )
 
 // Cell is a cell
 type Cell struct {
-	attribute int         // attribute
+	attribute *Attribute  // attribute
 	value     string      // attribute value
 	cover     *TupleCover // what the attribute covers
-	potential int         // what the cell can cover in the whole relation
+
+	potential        int // what the cell can cover in the whole relation
+	formulaPotential int // what the cell can cover in the context of a formula (has to be kept track of)
 }
 
-type cellSlice []Cell
+// CellPointers is a list of pointers to cells
+type CellPointers []*Cell
 
 // Len is part of sort.Interface.
-func (cells cellSlice) Len() int {
+func (cells CellPointers) Len() int {
 	return len(cells)
 }
 
 // Swap is part of sort.Interface.
-func (cells cellSlice) Swap(i, j int) {
+func (cells CellPointers) Swap(i, j int) {
 	cells[i], cells[j] = cells[j], cells[i]
 }
 
 // Less is part of sort.Interface. Sort by Potential.
-func (cells cellSlice) Less(i, j int) bool {
+func (cells CellPointers) Less(i, j int) bool {
 	// todo: prefer shorter prefixes to break ties
 	return cells[i].potential > cells[j].potential
 }
@@ -43,35 +45,7 @@ func (cell *Cell) recomputeCoverage() int {
 	return cell.potential
 }
 
-// returns the best cell form a list of cells with potentials
-// requires them to be sorted and requires that the true potential of a cell is less than the given potential
-func getBestCell(sortedCells cellSlice) Cell {
-	if !sort.IsSorted(sortedCells) {
-		panic("Not sorted")
-	}
-
-	n := len(sortedCells)
-
-	bestCoverage := 0
-	for i, cell := range sortedCells {
-		if cell.potential > bestCoverage {
-			coverage := cell.recomputeCoverage()
-			if coverage > bestCoverage {
-				bestCoverage = coverage
-			}
-		} else {
-			// potential is lower than the best so far
-			n = i
-			break
-		}
-	}
-
-	// sort the range where we recomputed things, the rest is definitely lower
-	sort.Sort(sortedCells[0:n])
-	return sortedCells[0]
-}
-
-func (cells cellSlice) String() string {
+func (cells CellPointers) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("Cells (%d):\n", len(cells)))
 	for _, cell := range cells {
@@ -82,6 +56,6 @@ func (cells cellSlice) String() string {
 
 func (cell Cell) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Attr %d: %s (%d)", cell.attribute, cell.value, cell.potential))
+	buffer.WriteString(fmt.Sprintf("Attr %s: %s (%d)", cell.attribute.name, cell.value, cell.potential))
 	return buffer.String()
 }

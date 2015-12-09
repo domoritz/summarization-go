@@ -21,21 +21,54 @@ type Formula map[int][]Cell // TODO
 // Summary is a summary
 type Summary []Formula
 
+func makeRankedCells(relation RelationIndex) CellPointers {
+	rankedCells := make(CellPointers, 0, relation.numValues)
+	for i, attr := range relation.attrs {
+		for value, cover := range attr.tuples {
+			cell := Cell{&relation.attrs[i], value, cover, len(*cover), 0}
+			rankedCells = append(rankedCells, &cell)
+		}
+	}
+	return rankedCells
+}
+
+// returns the best cell form a list of cells with potentials
+// requires them to be sorted and requires that the true potential of a cell is less than the given potential
+func getBestCell(sortedCells CellPointers) *Cell {
+	if !sort.IsSorted(sortedCells) {
+		panic("Not sorted")
+	}
+
+	n := len(sortedCells)
+
+	bestCoverage := 0
+	for i, cell := range sortedCells {
+		if cell.potential > bestCoverage {
+			coverage := cell.recomputeCoverage()
+			if coverage > bestCoverage {
+				bestCoverage = coverage
+			}
+		} else {
+			// potential is lower than the best so far
+			n = i
+			break
+		}
+	}
+
+	// sort the range where we recomputed things, the rest is definitely lower
+	sort.Sort(sortedCells[0:n])
+	return sortedCells[0]
+}
+
 // Summarize summarizes
 func (relation RelationIndex) Summarize(size int) Summary {
 	fmt.Println(relation)
 
 	var summary Summary
 
-	rankedCells := make(cellSlice, 0)
-	for i, attr := range relation.attrs {
-		for value, cover := range attr.tuples {
-			cell := Cell{i, value, cover, len(*cover)}
-			rankedCells = append(rankedCells, cell)
-		}
-	}
-
+	rankedCells := makeRankedCells(relation)
 	sort.Sort(rankedCells)
+
 	info.Println("Initial ranking")
 	fmt.Println(rankedCells)
 
@@ -49,32 +82,41 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		}
 
 		formula := make(Formula)
-		formula[cell.attribute] = []Cell{cell}
+		formula[cell.attribute.index] = []Cell{*cell}
 
 		// how much does the current formula contribute to the coverage
 		theTupleCover := make(tupleCover, relation.numTuples)
-		tuplesInFormula := make(map[int]bool)
+		tuplesInFormula := make(Set)
 
 		for tuple, covered := range *cell.cover {
 			if !covered {
 				theTupleCover[tuple]++
 			}
-			tuplesInFormula[tuple] = true
+			tuplesInFormula.Add(tuple)
 		}
 
-		info.Println("Just added a new formula, here is the tuple cover")
+		info.Printf("Just added a new formula with cell %s, here is the tuple cover\n", cell)
 		fmt.Println(theTupleCover)
+
+		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
+		// note that CellPointers has pointers so we can safely modify the slice but not the cells it points to
+		formulaRankedCells := make(CellPointers, len(rankedCells))
+		copy(formulaRankedCells, rankedCells)
 
 		// keep adding to formula
 		for true {
-			var bestCell Cell
+			var bestCell *Cell
 
 			// the best improvement in coverage for any cell
 			bestDiff := 0
 
-			for _, cell := range rankedCells {
-				// todo: ignore cells for the same attribute if it is single
-				// delete it from slice
+			for _, cell := range formulaRankedCells {
+				if cell.attribute.attributeType == single && len(formula[cell.attribute.index]) > 0 {
+					// the formula already has a value assigned to this attribute
+					// todo: cound delete here
+					info.Println("Ignoring single attribute cell", cell)
+					continue
+				}
 
 				// how much does adding the cell to the formula change the coverage
 				coverageDiff := 0
@@ -106,8 +148,8 @@ func (relation RelationIndex) Summarize(size int) Summary {
 			}
 
 			// add cell to formula
-			formulaCells := formula[bestCell.attribute]
-			formulaCells = append(formulaCells, bestCell)
+			idx := bestCell.attribute.index
+			formula[idx] = append(formula[idx], *bestCell)
 
 			// shrink the relevant tuples
 			for tuple := range tuplesInFormula {
