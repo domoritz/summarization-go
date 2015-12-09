@@ -6,27 +6,12 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strings"
 )
 
 var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
 
 // TupleCover is a map from tuple index to whether it is covered or not
 type TupleCover map[int]bool
-
-// Attribute is an attribute
-type Attribute struct {
-	attributeType Type                   // attribute type
-	name          string                 // attribute name
-	tuples        map[string]*TupleCover // TODO: make slice
-}
-
-// RelationIndex is an inverted index
-type RelationIndex struct {
-	attrs     []Attribute
-	numTuples int
-	numValues int
-}
 
 type tupleCover []int
 
@@ -170,32 +155,4 @@ func (cover tupleCover) String() string {
 		buffer.WriteString(fmt.Sprintf("%d: %d\n", i, cover))
 	}
 	return buffer.String()
-}
-
-func (relation RelationIndex) String() string {
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples, %d values):\n", len(relation.attrs), relation.numTuples, relation.numValues))
-	for _, attribute := range relation.attrs {
-		buffer.WriteString(fmt.Sprintf("Attribute %s (%s):\n", attribute.name, attribute.attributeType))
-		for value, cell := range attribute.tuples {
-			buffer.WriteString(fmt.Sprintf("Value %s covers: [", value))
-			var tuples []string
-			for tuple, covered := range *cell {
-				tuples = append(tuples, fmt.Sprintf("%d: %s", tuple, bString(covered)))
-			}
-
-			buffer.WriteString(strings.Join(tuples, " "))
-
-			buffer.WriteString("]\n")
-		}
-	}
-
-	return buffer.String()
-}
-
-func bString(b bool) string {
-	if b {
-		return "y"
-	}
-	return "n"
 }

@@ -1,10 +1,25 @@
 package summarize
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
 )
+
+// Attribute is an attribute
+type Attribute struct {
+	attributeType Type                   // attribute type
+	name          string                 // attribute name
+	tuples        map[string]*TupleCover // TODO: make slice
+}
+
+// RelationIndex is an inverted index
+type RelationIndex struct {
+	attrs     []Attribute
+	numTuples int
+	numValues int
+}
 
 // NewIndexFromString creates a relation index from a string
 func NewIndexFromString(description string) (*RelationIndex, error) {
@@ -96,4 +111,32 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 	}
 
 	return &RelationIndex{index, numTuples, numValues}, nil
+}
+
+func (relation RelationIndex) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples, %d values):\n", len(relation.attrs), relation.numTuples, relation.numValues))
+	for _, attribute := range relation.attrs {
+		buffer.WriteString(fmt.Sprintf("Attribute %s (%s):\n", attribute.name, attribute.attributeType))
+		for value, cell := range attribute.tuples {
+			buffer.WriteString(fmt.Sprintf("Value %s covers: [", value))
+			var tuples []string
+			for tuple, covered := range *cell {
+				tuples = append(tuples, fmt.Sprintf("%d: %s", tuple, bString(covered)))
+			}
+
+			buffer.WriteString(strings.Join(tuples, " "))
+
+			buffer.WriteString("]\n")
+		}
+	}
+
+	return buffer.String()
+}
+
+func bString(b bool) string {
+	if b {
+		return "y"
+	}
+	return "n"
 }
