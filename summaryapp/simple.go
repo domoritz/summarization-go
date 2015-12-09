@@ -13,8 +13,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(relation)
-
 	summary := relation.Summarize(3)
 
 	fmt.Println("Summary:")

@@ -33,7 +33,7 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 			index[i].attributeType = hierarchy
 		}
 		index[i].name = names[i]
-		index[i].tuples = make(map[string]TupleCover)
+		index[i].tuples = make(map[string]*TupleCover)
 	}
 
 	numTuples := len(lines[2:])
@@ -60,10 +60,10 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 				if tc, has := attr.tuples[value]; !has {
 					c := make(TupleCover)
 					c[tuple] = false
-					attr.tuples[value] = c
+					attr.tuples[value] = &c
 					numValues++
 				} else {
-					tc[tuple] = false
+					(*tc)[tuple] = false
 				}
 			case set:
 				setValues := strings.Split(value, " ")
@@ -71,10 +71,10 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 					if tc, has := attr.tuples[setValue]; !has {
 						c := make(TupleCover)
 						c[tuple] = false
-						attr.tuples[setValue] = c
+						attr.tuples[setValue] = &c
 						numValues++
 					} else {
-						tc[tuple] = false
+						(*tc)[tuple] = false
 					}
 				}
 			case hierarchy:
@@ -85,10 +85,10 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 					if tc, has := attr.tuples[prefix]; !has {
 						c := make(TupleCover)
 						c[tuple] = false
-						attr.tuples[prefix] = c
+						attr.tuples[prefix] = &c
 						numValues++
 					} else {
-						tc[tuple] = false
+						(*tc)[tuple] = false
 					}
 				}
 			}
