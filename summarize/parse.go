@@ -37,6 +37,7 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 	}
 
 	numTuples := len(lines[2:])
+	numValues := 0
 
 	for tuple, line := range lines[2:] {
 		values := strings.Split(line, ",")
@@ -60,6 +61,7 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 					c := make(TupleCover)
 					c[tuple] = false
 					attr.tuples[value] = c
+					numValues++
 				} else {
 					tc[tuple] = false
 				}
@@ -70,6 +72,7 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 						c := make(TupleCover)
 						c[tuple] = false
 						attr.tuples[setValue] = c
+						numValues++
 					} else {
 						tc[tuple] = false
 					}
@@ -83,6 +86,7 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 						c := make(TupleCover)
 						c[tuple] = false
 						attr.tuples[prefix] = c
+						numValues++
 					} else {
 						tc[tuple] = false
 					}
@@ -91,5 +95,5 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 		}
 	}
 
-	return &RelationIndex{index, numTuples}, nil
+	return &RelationIndex{index, numTuples, numValues}, nil
 }

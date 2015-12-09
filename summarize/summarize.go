@@ -41,10 +41,9 @@ type Attribute struct {
 
 // Cell is a cell
 type Cell struct {
-	attribute       *Attribute
-	value           string
-	coverage        int // coverage in the whole relation
-	formulaCoverage int // coverage inside the tuple slice
+	attribute *Attribute
+	value     string
+	potential int // what the cell can cover in the whole relation
 }
 
 type cellSlice []*Cell
@@ -61,19 +60,54 @@ func (cells cellSlice) Swap(i, j int) {
 
 // Less is part of sort.Interface. Sort by Potential.
 func (cells cellSlice) Less(i, j int) bool {
-	return cells[i].coverage > cells[j].coverage
+	return cells[i].potential > cells[j].potential
 }
 
 // RelationIndex is an inverted index
 type RelationIndex struct {
 	attrs     []Attribute
 	numTuples int
+	numValues int
 }
 
 type tupleCover []int
 
 // Summary is a summary
 type Summary [][]Cell
+
+func (cell *Cell) recomputeCoverage() int {
+	cell.potential = 0
+	for _, covered := range cell.attribute.tuples[cell.value] {
+		if !covered {
+			cell.potential++
+		}
+	}
+	return cell.potential
+}
+
+// returns the best cell form a list of cells with potentials
+// requires them to be sorted and requires that the true potential of a cell is less than the given potential
+func getBestCell(rankedCells cellSlice) Cell {
+	n := len(rankedCells)
+
+	bestCoverage := 0
+	for i, cell := range rankedCells {
+		if cell.potential > bestCoverage {
+			coverage := cell.recomputeCoverage()
+			if coverage > bestCoverage {
+				bestCoverage = coverage
+			}
+		} else {
+			// potential is lower than the best so far
+			n = i
+			break
+		}
+	}
+
+	// sort the range where we recomputed things, the rest is definitely lower
+	sort.Sort(rankedCells[0:n])
+	return *rankedCells[0]
+}
 
 // Summarize summarizes
 func (relation RelationIndex) Summarize(size int) Summary {
@@ -82,7 +116,7 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	rankedCells := make(cellSlice, 0)
 	for i, attr := range relation.attrs {
 		for value, cover := range attr.tuples {
-			cell := Cell{&relation.attrs[i], value, len(cover), -1}
+			cell := Cell{&relation.attrs[i], value, len(cover)}
 			rankedCells = append(rankedCells, &cell)
 		}
 	}
@@ -90,33 +124,75 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	sort.Sort(rankedCells)
 	fmt.Println(rankedCells)
 
-	// how much does the current formula contribute to the coverage
-	tupleCover := make(tupleCover, relation.numTuples)
-
 	for len(summary) < size {
 		// add new formula with best cell
-		cell := rankedCells[0]
-		formula := []Cell{*cell}
+		cell := getBestCell(rankedCells)
+		formula := []Cell{cell}
 		summary = append(summary, formula)
+
+		// how much does the current formula contribute to the coverage
+		theTupleCover := make(tupleCover, relation.numTuples)
+		tuplesInFormula := make(map[int]bool)
 
 		for tuple, covered := range cell.attribute.tuples[cell.value] {
 			if !covered {
-				tupleCover[tuple]++
+				theTupleCover[tuple]++
 			}
+			tuplesInFormula[tuple] = true
 		}
 
-		fmt.Println(tupleCover)
+		fmt.Println(theTupleCover)
 
 		// keep adding to formula
-		// for true {
-		// 	var bestCell *Cell
-		// 	for _, cell := range rankedCells {
-		// 		if bestCell {
-		//
-		// 		}
-		// 	}
-		// }
+		for true {
+			var bestCell *Cell
 
+			// the best improvement in coverage for any cell
+			bestDiff := 0
+
+			for _, cell := range rankedCells {
+				// how much does adding the cell to the formla change the coverage
+				coverageDiff := 0
+
+				tuples := cell.attribute.tuples[cell.value]
+				for tuple := range tuplesInFormula {
+					covered, has := tuples[tuple]
+					if has {
+						// no conflict
+						if !covered {
+							// and cell is not yet covered, great
+							coverageDiff++
+						}
+					} else {
+						// conflict, need to remove whatever we already have for this tuple
+						coverageDiff -= theTupleCover[tuple]
+					}
+				}
+
+				if coverageDiff > bestDiff {
+					bestCell = cell
+					bestDiff = coverageDiff
+				}
+			}
+
+			if bestDiff == 0 {
+				// we could not improve the coverage so let's give up
+				break
+			}
+
+			// add cell to formula
+			formula = append(formula, *bestCell)
+
+			// shrink the relevant formulas
+			tuples := cell.attribute.tuples[cell.value]
+			for tuple := range tuplesInFormula {
+				if _, has := tuples[tuple]; !has {
+					delete(tuples, tuple)
+				}
+			}
+
+			break
+		}
 		break
 	}
 
@@ -125,6 +201,7 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 func (cells cellSlice) String() string {
 	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("Cells (%d):\n", len(cells)))
 	for _, cell := range cells {
 		buffer.WriteString(fmt.Sprintf("%s\n", cell))
 	}
@@ -133,7 +210,7 @@ func (cells cellSlice) String() string {
 
 func (cover tupleCover) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString("Cover:\n")
+	buffer.WriteString(fmt.Sprintf("Cover (%d):\n", len(cover)))
 	for i, cover := range cover {
 		buffer.WriteString(fmt.Sprintf("%d: %d\n", i, cover))
 	}
@@ -142,16 +219,17 @@ func (cover tupleCover) String() string {
 
 func (cell Cell) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Attr %s: %s (%d)", cell.attribute.name, cell.value, cell.coverage))
+	buffer.WriteString(fmt.Sprintf("Attr %s: %s (%d)", cell.attribute.name, cell.value, cell.potential))
 	return buffer.String()
 }
 
 func (relation RelationIndex) String() string {
 	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples, %d values):\n", len(relation.attrs), relation.numTuples, relation.numValues))
 	for _, attribute := range relation.attrs {
 		buffer.WriteString(fmt.Sprintf("Attribute %s (%s):\n", attribute.name, attribute.attributeType))
 		for value, cell := range attribute.tuples {
-			buffer.WriteString(fmt.Sprintf("Value %s covers tuples: [", value))
+			buffer.WriteString(fmt.Sprintf("Value %s covers: [", value))
 			var tuples []string
 			for tuple := range cell {
 				tuples = append(tuples, fmt.Sprintf("%d", tuple))
