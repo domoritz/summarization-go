@@ -20,8 +20,7 @@ type Value struct {
 }
 
 // Summary is a summary
-// type Summary [][]Value
-type Summary []Formula
+type Summary [][]Value
 
 func makeRankedCells(relation RelationIndex) CellPointers {
 	rankedCells := make(CellPointers, 0, relation.numValues)
@@ -181,7 +180,12 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		info.Println("Relation")
 		fmt.Println(relation)
 
-		summary = append(summary, formula)
+		var values []Value
+		for _, cell := range formula.cells {
+			value := Value{cell.attribute.attributeType, cell.attribute.attributeName, cell.value}
+			values = append(values, value)
+		}
+		summary = append(summary, values)
 	}
 
 	return summary
