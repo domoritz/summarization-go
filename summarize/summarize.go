@@ -43,27 +43,21 @@ func getBestCell(sortedCells CellPointers) *Cell {
 		panic("Not sorted")
 	}
 
-	n := len(sortedCells)
-
 	bestCoverage := 0
-	for i, cell := range sortedCells {
+	for _, cell := range sortedCells {
 		if cell.potential > bestCoverage {
 			coverage := cell.recomputeCoverage()
 			if coverage > bestCoverage {
 				bestCoverage = coverage
 			}
-		} else {
-			// potential is lower than the best so far
-			n = i
-			break
 		}
 	}
 
-	// sort the range where we recomputed things, the rest is definitely lower
-	sort.Sort(sortedCells[0:n])
+	sort.Sort(sortedCells)
 	return sortedCells[0]
 }
 
+// returns nil if no cell could be found that improves the formula
 func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTheseCells *intsets.Sparse) *Cell {
 	// the best improvement in coverage for any cell
 	bestDiff := 0
@@ -73,6 +67,7 @@ func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTh
 	for _, cell := range formulaRankedCells {
 		if skipTheseCells.Has(cell.uid) {
 			dbg.Println("Skipping cell")
+			continue
 		}
 
 		if cell.attribute.attributeType == single && formula.usedSingleAttributes.Contains(cell.attribute.index) {
@@ -85,7 +80,9 @@ func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTh
 
 		// how much does adding the cell to the formula change the coverage
 		valueDiff := 0
+		cell.formulaPotential = 0
 
+		// todo: what if we do the inverse?
 		for tuple, value := range formula.tupleValue {
 			covered, has := (*cell.cover)[tuple]
 			if has {
@@ -93,6 +90,7 @@ func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTh
 				if !covered {
 					// and cell is not yet covered, great
 					valueDiff++
+					cell.formulaPotential++
 				}
 			} else {
 				// conflict, need to remove whatever we already have for this tuple
@@ -100,7 +98,7 @@ func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTh
 			}
 		}
 
-		dbg.Printf("Adding cell %s adds %d", cell, valueDiff)
+		dbg.Printf("Adding cell %s adds %d and has potential %d", cell, valueDiff, cell.formulaPotential)
 
 		if valueDiff > bestDiff {
 			bestCell = cell
@@ -109,7 +107,6 @@ func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTh
 	}
 
 	if bestDiff == 0 {
-		// we could not improve the coverage so let's give up
 		info.Println("Looks like we cannot find a cell that should be added")
 		return nil
 	}
@@ -155,6 +152,8 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 		// keep adding to formula
 		for true {
+			fmt.Println("--------------------------------")
+
 			bestCell := getBestFormulaCell(formulaRankedCells, formula, &skipTheseCells)
 
 			if bestCell == nil {
@@ -164,15 +163,15 @@ func (relation RelationIndex) Summarize(size int) Summary {
 			// we should skip the best cell in the next iteration
 			skipTheseCells.Insert(bestCell.uid)
 
-			// dbg.Printf("Now skipping %d cells\n", skipTheseCells.Len())
+			dbg.Printf("Now skipping %d cells\n", skipTheseCells.Len())
 
 			// add cell to formula
 			formula.AddCell(bestCell)
 
 			info.Printf("Just added a new cell (%s) to the formula\n", bestCell)
-
-			break
 		}
+
+		fmt.Println("#############")
 
 		// set cover in index
 		formula.CoverIndex(&relation)
@@ -183,7 +182,6 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		fmt.Println(relation)
 
 		summary = append(summary, formula)
-		break
 	}
 
 	return summary
