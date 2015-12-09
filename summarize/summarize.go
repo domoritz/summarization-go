@@ -1,10 +1,10 @@
 package summarize
 
 import (
+	"container/heap"
 	"fmt"
 	"log"
 	"os"
-	"sort"
 
 	"golang.org/x/tools/container/intsets"
 )
@@ -22,7 +22,7 @@ type Value struct {
 // Summary is a summary
 type Summary [][]Value
 
-func makeRankedCells(relation RelationIndex) CellPointers {
+func makeRankedCells(relation RelationIndex) *CellPointers {
 	rankedCells := make(CellPointers, 0, relation.numValues)
 	uid := 0
 	for i, attr := range relation.attrs {
@@ -32,31 +32,29 @@ func makeRankedCells(relation RelationIndex) CellPointers {
 			uid++
 		}
 	}
-	return rankedCells
+	return &rankedCells
 }
 
 // returns the best cell form a list of cells with potentials
-// requires them to be sorted and requires that the true potential of a cell is less than the given potential
-func getBestCell(sortedCells CellPointers) *Cell {
-	if !sort.IsSorted(sortedCells) {
-		panic("Not sorted")
-	}
-
+// requires that the cells are a sorted heap
+func getBestCell(cellHeap *CellPointers) *Cell {
 	bestCoverage := 0
-	for _, cell := range sortedCells {
-		if cell.potential > bestCoverage {
-			coverage := cell.recomputeCoverage()
-			if coverage > bestCoverage {
-				bestCoverage = coverage
-			}
+
+	cell := (*cellHeap)[0]
+	for cell.potential > bestCoverage {
+		coverage := cell.recomputeCoverage()
+		heap.Fix(cellHeap, 0)
+		if coverage > bestCoverage {
+			bestCoverage = coverage
 		}
+		cell = (*cellHeap)[0]
 	}
 
-	sort.Sort(sortedCells)
-	return sortedCells[0]
+	return (*cellHeap)[0]
 }
 
 // returns nil if no cell could be found that improves the formula
+// requires cells to be a heap
 func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTheseCells *intsets.Sparse) *Cell {
 	// the best improvement in coverage for any cell
 	bestDiff := 0
@@ -120,7 +118,7 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	var summary Summary
 
 	rankedCells := makeRankedCells(relation)
-	sort.Sort(rankedCells)
+	heap.Init(rankedCells)
 
 	dbg.Println("Initial ranking")
 	fmt.Println(rankedCells)
@@ -143,8 +141,8 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellPointers has pointers so we can safely modify the slice but not the cells it points to
-		formulaRankedCells := make(CellPointers, len(rankedCells))
-		copy(formulaRankedCells, rankedCells)
+		formulaRankedCells := make(CellPointers, len(*rankedCells))
+		copy(formulaRankedCells, *rankedCells)
 
 		// which cells to skip in formulaRankedCells, should be reset for each formula
 		var skipTheseCells intsets.Sparse

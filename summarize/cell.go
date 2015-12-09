@@ -23,9 +23,7 @@ type Cell struct {
 type CellPointers []*Cell
 
 // Len is part of sort.Interface.
-func (cells CellPointers) Len() int {
-	return len(cells)
-}
+func (cells CellPointers) Len() int { return len(cells) }
 
 // Swap is part of sort.Interface.
 func (cells CellPointers) Swap(i, j int) {
@@ -36,6 +34,20 @@ func (cells CellPointers) Swap(i, j int) {
 func (cells CellPointers) Less(i, j int) bool {
 	// todo: prefer shorter prefixes to break ties
 	return cells[i].potential > cells[j].potential
+}
+
+// Push pushes
+func (cells *CellPointers) Push(x interface{}) {
+	*cells = append(*cells, x.(*Cell))
+}
+
+// Pop pops
+func (cells *CellPointers) Pop() interface{} {
+	old := *cells
+	n := len(old)
+	x := old[n-1]
+	*cells = old[0 : n-1]
+	return x
 }
 
 // recomputes how much the tuple covers
