@@ -11,28 +11,6 @@ import (
 
 var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
 
-// Type is the attribute type
-type Type int
-
-const (
-	single Type = iota
-	set
-	hierarchy
-)
-
-func (t Type) String() string {
-	switch t {
-	case single:
-		return "single"
-	case set:
-		return "set"
-	case hierarchy:
-		return "hierarchy"
-	default:
-		return "unknown"
-	}
-}
-
 // TupleCover is a map from tuple index to whether it is covered or not
 type TupleCover map[int]bool
 
@@ -41,32 +19,6 @@ type Attribute struct {
 	attributeType Type                   // attribute type
 	name          string                 // attribute name
 	tuples        map[string]*TupleCover // TODO: make slice
-}
-
-// Cell is a cell
-type Cell struct {
-	attribute int         // attribute
-	value     string      // attribute value
-	cover     *TupleCover // what the attribute covers
-	potential int         // what the cell can cover in the whole relation
-}
-
-type cellSlice []Cell
-
-// Len is part of sort.Interface.
-func (cells cellSlice) Len() int {
-	return len(cells)
-}
-
-// Swap is part of sort.Interface.
-func (cells cellSlice) Swap(i, j int) {
-	cells[i], cells[j] = cells[j], cells[i]
-}
-
-// Less is part of sort.Interface. Sort by Potential.
-func (cells cellSlice) Less(i, j int) bool {
-	// todo: prefer shorter prefixes to break ties
-	return cells[i].potential > cells[j].potential
 }
 
 // RelationIndex is an inverted index
@@ -78,46 +30,11 @@ type RelationIndex struct {
 
 type tupleCover []int
 
+// Formula is a map from attribute to lists of cells
+type Formula map[int][]Cell // TODO
+
 // Summary is a summary
 type Summary []Formula
-
-// Formula is a map from attribute to lists of cells
-type Formula map[int][]Cell
-
-// recomputes how much the tuple covers
-func (cell *Cell) recomputeCoverage() int {
-	cell.potential = 0
-	for _, covered := range *cell.cover {
-		if !covered {
-			cell.potential++
-		}
-	}
-	return cell.potential
-}
-
-// returns the best cell form a list of cells with potentials
-// requires them to be sorted and requires that the true potential of a cell is less than the given potential
-func getBestCell(rankedCells cellSlice) Cell {
-	n := len(rankedCells)
-
-	bestCoverage := 0
-	for i, cell := range rankedCells {
-		if cell.potential > bestCoverage {
-			coverage := cell.recomputeCoverage()
-			if coverage > bestCoverage {
-				bestCoverage = coverage
-			}
-		} else {
-			// potential is lower than the best so far
-			n = i
-			break
-		}
-	}
-
-	// sort the range where we recomputed things, the rest is definitely lower
-	sort.Sort(rankedCells[0:n])
-	return rankedCells[0]
-}
 
 // Summarize summarizes
 func (relation RelationIndex) Summarize(size int) Summary {
@@ -240,18 +157,10 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		fmt.Println(relation)
 
 		summary = append(summary, formula)
+		break
 	}
 
 	return summary
-}
-
-func (cells cellSlice) String() string {
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Cells (%d):\n", len(cells)))
-	for _, cell := range cells {
-		buffer.WriteString(fmt.Sprintf("%s\n", cell))
-	}
-	return buffer.String()
 }
 
 func (cover tupleCover) String() string {
@@ -260,12 +169,6 @@ func (cover tupleCover) String() string {
 	for i, cover := range cover {
 		buffer.WriteString(fmt.Sprintf("%d: %d\n", i, cover))
 	}
-	return buffer.String()
-}
-
-func (cell Cell) String() string {
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Attr %d: %s (%d)", cell.attribute, cell.value, cell.potential))
 	return buffer.String()
 }
 
@@ -278,7 +181,7 @@ func (relation RelationIndex) String() string {
 			buffer.WriteString(fmt.Sprintf("Value %s covers: [", value))
 			var tuples []string
 			for tuple, covered := range *cell {
-				tuples = append(tuples, fmt.Sprintf("%d: %t", tuple, covered))
+				tuples = append(tuples, fmt.Sprintf("%d: %s", tuple, bString(covered)))
 			}
 
 			buffer.WriteString(strings.Join(tuples, " "))
@@ -288,4 +191,11 @@ func (relation RelationIndex) String() string {
 	}
 
 	return buffer.String()
+}
+
+func bString(b bool) string {
+	if b {
+		return "y"
+	}
+	return "n"
 }
