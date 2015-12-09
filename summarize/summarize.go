@@ -1,7 +1,6 @@
 package summarize
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -13,15 +12,15 @@ import (
 var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
 var dbg = log.New(os.Stdout, "DEBUG: ", log.Lshortfile)
 
-// TupleCover is a map from tuple index to whether it is covered or not
-type TupleCover map[int]bool
-
-type tupleCover []int
-
-// Formula is a map from attribute id to lists of cells
-type Formula map[int][]Cell // TODO
+// Value is an assignment for the summary
+type Value struct {
+	attributeType Type   // attribute type
+	attributeName string // attribute name
+	value         string // value
+}
 
 // Summary is a summary
+// type Summary [][]Value
 type Summary []Formula
 
 func makeRankedCells(relation RelationIndex) CellPointers {
@@ -65,6 +64,59 @@ func getBestCell(sortedCells CellPointers) *Cell {
 	return sortedCells[0]
 }
 
+func getBestFormulaCell(formulaRankedCells CellPointers, formula Formula, skipTheseCells *intsets.Sparse) *Cell {
+	// the best improvement in coverage for any cell
+	bestDiff := 0
+
+	var bestCell *Cell
+
+	for _, cell := range formulaRankedCells {
+		if skipTheseCells.Has(cell.uid) {
+			dbg.Println("Skipping cell")
+		}
+
+		if cell.attribute.attributeType == single && formula.usedSingleAttributes.Contains(cell.attribute.index) {
+			// the formula already has a value assigned to this attribute
+			// todo: cound delete here
+			dbg.Println("Ignoring single attribute cell", cell)
+			skipTheseCells.Insert(cell.uid)
+			continue
+		}
+
+		// how much does adding the cell to the formula change the coverage
+		valueDiff := 0
+
+		for tuple, value := range formula.tupleValue {
+			covered, has := (*cell.cover)[tuple]
+			if has {
+				// no conflict
+				if !covered {
+					// and cell is not yet covered, great
+					valueDiff++
+				}
+			} else {
+				// conflict, need to remove whatever we already have for this tuple
+				valueDiff -= value
+			}
+		}
+
+		dbg.Printf("Adding cell %s adds %d", cell, valueDiff)
+
+		if valueDiff > bestDiff {
+			bestCell = cell
+			bestDiff = valueDiff
+		}
+	}
+
+	if bestDiff == 0 {
+		// we could not improve the coverage so let's give up
+		info.Println("Looks like we cannot find a cell that should be added")
+		return nil
+	}
+
+	return bestCell
+}
+
 // Summarize summarizes
 func (relation RelationIndex) Summarize(size int) Summary {
 	fmt.Println(relation)
@@ -78,6 +130,8 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	fmt.Println(rankedCells)
 
 	for len(summary) < size {
+		fmt.Println("==============================")
+
 		// add new formula with best cell
 		cell := getBestCell(rankedCells)
 
@@ -86,22 +140,10 @@ func (relation RelationIndex) Summarize(size int) Summary {
 			break
 		}
 
-		formula := make(Formula)
-		formula[cell.attribute.index] = []Cell{*cell}
+		formula := NewFormula(cell)
 
-		// how much does the current formula contribute to the coverage
-		theTupleCover := make(tupleCover, relation.numTuples)
-		tuplesInFormula := make(Set)
-
-		for tuple, covered := range *cell.cover {
-			if !covered {
-				theTupleCover[tuple]++
-			}
-			tuplesInFormula.Add(tuple)
-		}
-
-		dbg.Printf("Just added a new formula with cell %s, here is the tuple cover\n", cell)
-		fmt.Println(theTupleCover)
+		dbg.Printf("Just added a new formula with cell %s\n", cell)
+		fmt.Println(formula.tupleValue)
 
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellPointers has pointers so we can safely modify the slice but not the cells it points to
@@ -113,90 +155,31 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 		// keep adding to formula
 		for true {
-			var bestCell *Cell
+			bestCell := getBestFormulaCell(formulaRankedCells, formula, &skipTheseCells)
 
-			// the best improvement in coverage for any cell
-			bestDiff := 0
-
-			for _, cell := range formulaRankedCells {
-				if skipTheseCells.Has(cell.uid) {
-					dbg.Println("Skipping cell")
-				}
-
-				if cell.attribute.attributeType == single && len(formula[cell.attribute.index]) > 0 {
-					// the formula already has a value assigned to this attribute
-					// todo: cound delete here
-					dbg.Println("Ignoring single attribute cell", cell)
-					skipTheseCells.Insert(cell.uid)
-					continue
-				}
-
-				// how much does adding the cell to the formula change the coverage
-				coverageDiff := 0
-
-				for tuple := range tuplesInFormula {
-					covered, has := (*cell.cover)[tuple]
-					if has {
-						// no conflict
-						if !covered {
-							// and cell is not yet covered, great
-							coverageDiff++
-						}
-					} else {
-						// conflict, need to remove whatever we already have for this tuple
-						coverageDiff -= theTupleCover[tuple]
-					}
-				}
-
-				if coverageDiff > bestDiff {
-					bestCell = cell
-					bestDiff = coverageDiff
-				}
-			}
-
-			break
-
-			if bestDiff == 0 {
-				// we could not improve the coverage so let's give up
-				info.Println("Looks like we cannot find a cell that should be added")
+			if bestCell == nil {
 				break
 			}
 
+			// we should skip the best cell in the next iteration
 			skipTheseCells.Insert(bestCell.uid)
-			dbg.Printf("Now skipping %d cells\n", skipTheseCells.Len())
+
+			// dbg.Printf("Now skipping %d cells\n", skipTheseCells.Len())
 
 			// add cell to formula
-			idx := bestCell.attribute.index
-			formula[idx] = append(formula[idx], *bestCell)
-
-			// shrink the relevant tuples
-			for tuple := range tuplesInFormula {
-				if _, has := (*bestCell.cover)[tuple]; !has {
-					delete(tuplesInFormula, tuple)
-				} else {
-					theTupleCover[tuple]++
-				}
-			}
-
-			dbg.Println("Relevant tuples:", tuplesInFormula)
+			formula.AddCell(bestCell)
 
 			info.Printf("Just added a new cell (%s) to the formula\n", bestCell)
-			fmt.Println(theTupleCover)
+
+			break
 		}
 
-		// update the cover so that in the next iteration the same tuples are not covered again
-		for _, formulaCells := range formula {
-			for _, cell := range formulaCells {
-				for tuple := range tuplesInFormula {
-					if covered, has := (*cell.cover)[tuple]; has && !covered {
-						// set uncovered to covered
-						(*cell.cover)[tuple] = true
-					}
-				}
-			}
-		}
+		// set cover in index
+		formula.CoverIndex(&relation)
 
-		info.Printf("After adding a new formula %s the relation looks like\n", formula)
+		info.Println("Formula")
+		fmt.Println(formula.cells)
+		info.Println("Relation")
 		fmt.Println(relation)
 
 		summary = append(summary, formula)
@@ -204,13 +187,4 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	}
 
 	return summary
-}
-
-func (cover tupleCover) String() string {
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Cover (%d):\n", len(cover)))
-	for i, cover := range cover {
-		buffer.WriteString(fmt.Sprintf("%d: %d\n", i, cover))
-	}
-	return buffer.String()
 }

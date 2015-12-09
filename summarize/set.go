@@ -22,3 +22,11 @@ func (set Set) String() string {
 func (set Set) Add(i int) {
 	set[i] = struct{}{}
 }
+
+// Contains is true if the set contains the element
+func (set Set) Contains(i int) bool {
+	if _, has := set[i]; has {
+		return true
+	}
+	return false
+}

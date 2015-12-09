@@ -5,6 +5,9 @@ import (
 	"fmt"
 )
 
+// TupleCover is a map from tuple index to how much the tuple contributes
+type TupleCover map[int]bool
+
 // Cell is a cell
 type Cell struct {
 	uid       int         // unique id for cell
@@ -57,6 +60,6 @@ func (cells CellPointers) String() string {
 
 func (cell Cell) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Attr %s: %s (%d)", cell.attribute.name, cell.value, cell.potential))
+	buffer.WriteString(fmt.Sprintf("Attr %s: %s (%d)", cell.attribute.attributeName, cell.value, cell.potential))
 	return buffer.String()
 }
