@@ -36,8 +36,8 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 
 // returns the best cell form a list of cells with potentials
 // requires that the cells are a sorted heap
-func updateBestCellHeap(cellHeap *CellHeap) {
-	bestCover := -1
+func updateBestCellHeap(cellHeap *CellHeap) bool {
+	bestCover := 0
 
 	for cellHeap.Peek().potential > bestCover {
 		cell := cellHeap.Peek()
@@ -52,6 +52,8 @@ func updateBestCellHeap(cellHeap *CellHeap) {
 			bestCover = cover
 		}
 	}
+
+	return bestCover != 0
 }
 
 // returns nil if no cell could be found that improves the formula
@@ -111,9 +113,9 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		fmt.Println("==============================")
 
 		// add new formula with best cell
-		updateBestCellHeap(&rankedCells)
+		goodFormula := updateBestCellHeap(&rankedCells)
 
-		if rankedCells.Peek().potential <= 0 {
+		if !goodFormula {
 			info.Println("Adding a formula doesn't help. Let's stop right here.")
 			break
 		}
@@ -126,11 +128,11 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		cell := heap.Pop(&formulaRankedCells).(RankedCell)
 		formula := NewFormula(*cell.cell)
 
-		dbg.Println("Popped. Ranking is now")
-		fmt.Println(formulaRankedCells)
-
 		dbg.Printf("Just added a new formula with cell %s\n", cell.cell)
 		fmt.Println(formula.tupleCover)
+
+		dbg.Println("Popped. Ranking is now")
+		fmt.Println(formulaRankedCells)
 
 		// keep adding to formula
 		for true {
@@ -147,7 +149,10 @@ func (relation RelationIndex) Summarize(size int) Summary {
 			cell := heap.Pop(&formulaRankedCells).(RankedCell)
 			formula.AddCell(*cell.cell)
 
-			info.Printf("Just added a new cell (%s) to the formula\n", formulaRankedCells.Peek())
+			info.Printf("Just added a new cell (%s) to the formula\n", cell)
+
+			dbg.Println("Popped. Ranking is now")
+			fmt.Println(formulaRankedCells)
 		}
 
 		fmt.Println("#############")

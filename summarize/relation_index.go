@@ -126,7 +126,7 @@ func (relation RelationIndex) String() string {
 			buffer.WriteString(fmt.Sprintf("Value %s covers: [", cell.value))
 			var tuples []string
 			for tuple, covered := range cell.cover {
-				tuples = append(tuples, fmt.Sprintf("%d: %s", tuple, bString(covered)))
+				tuples = append(tuples, fmt.Sprintf("%d:%s", tuple, bString(covered)))
 			}
 
 			buffer.WriteString(strings.Join(tuples, " "))
