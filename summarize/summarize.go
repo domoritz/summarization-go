@@ -3,15 +3,14 @@ package summarize
 import (
 	"container/heap"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 
 	"github.com/olekukonko/tablewriter"
 )
 
-var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
-var dbg = log.New(os.Stdout, "DEBUG: ", log.Lshortfile)
+// var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
+// var dbg = log.New(os.Stdout, "DEBUG: ", log.Lshortfile)
 
 // Value is an assignment for the summary
 type Value struct {
@@ -44,11 +43,7 @@ func updateBestCellHeap(cellHeap *CellHeap) bool {
 
 	for cellHeap.Peek().potential > bestCover {
 		cell := cellHeap.Peek()
-
-		fmt.Print(cell.cell, "From ", cell.potential)
 		cover := cell.recomputeCoverage()
-		fmt.Println(" to ", cover, cell.potential)
-
 		heap.Fix(cellHeap, 0)
 
 		if cover > bestCover {
@@ -72,7 +67,6 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 		cell := formulaCellHeap.Peek()
 		if cell.cell.attribute.attributeType == single && formula.usedSingleAttributes.Contains(cell.cell.attribute.index) {
 			// the formula already has a value assigned to this attribute
-			dbg.Println("Ignoring single attribute cell", cell)
 			heap.Pop(formulaCellHeap)
 			continue
 		}
@@ -100,8 +94,6 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 
 // Summarize summarizes
 func (relation RelationIndex) Summarize(size int) Summary {
-	fmt.Println(relation)
-
 	var formulaCover []int
 	summaryCover := 0
 	var summary Summary
@@ -109,17 +101,12 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	rankedCells := makeRankedCells(relation)
 	heap.Init(&rankedCells)
 
-	dbg.Println("Initial ranking")
-	fmt.Println(rankedCells)
-
 	for len(summary) < size {
-		fmt.Println("==============================")
 
 		// add new formula with best cell
 		goodFormula := updateBestCellHeap(&rankedCells)
 
 		if !goodFormula {
-			info.Println("Adding a formula doesn't help. Let's stop right here.")
 			break
 		}
 
@@ -131,43 +118,21 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		cell := heap.Pop(&formulaRankedCells).(RankedCell)
 		formula := NewFormula(*cell.cell)
 
-		dbg.Printf("Just added a new formula with cell %s\n", cell.cell)
-		fmt.Println(formula.tupleCover)
-
-		dbg.Println("Popped. Ranking is now")
-		fmt.Println(formulaRankedCells)
-
 		// keep adding to formula
 		for true {
-			fmt.Println("--------------------------------")
-
 			improved := updateFormulaBestCellHeap(&formulaRankedCells, formula)
 
 			if !improved {
-				info.Println("Adding a new cell to the formula doesn't help.")
 				break
 			}
 
 			// add cell to formula
 			cell := heap.Pop(&formulaRankedCells).(RankedCell)
 			formula.AddCell(*cell.cell)
-
-			info.Printf("Just added a new cell (%s) to the formula\n", cell)
-
-			dbg.Println("Popped. Ranking is now")
-			fmt.Println(formulaRankedCells)
 		}
-
-		fmt.Println("#############")
 
 		// set cover in index
 		formula.CoverIndex(&relation)
-
-		info.Println("Formula")
-		fmt.Println(formula.cells)
-
-		info.Println("Relation")
-		fmt.Println(relation)
 
 		cover := 0
 		for _, tupleCover := range formula.tupleCover {
