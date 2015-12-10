@@ -20,13 +20,13 @@ type Value struct {
 // Summary is a summary
 type Summary [][]Value
 
-func makeRankedCells(relation RelationIndex) CellPointers {
-	rankedCells := make(CellPointers, 0, relation.numValues)
+func makeRankedCells(relation RelationIndex) CellHeap {
+	rankedCells := make(CellHeap, 0, relation.numValues)
 	uid := 0
-	for i, attr := range relation.attrs {
-		for value, cover := range attr.tuples {
-			cell := Cell{uid, &relation.attrs[i], value, cover, len(*cover), 0}
-			rankedCells = append(rankedCells, &cell)
+	for _, attr := range relation.attrs {
+		for _, cell := range attr.cells {
+			rankedCell := RankedCell{&cell, len(cell.cover)}
+			rankedCells = append(rankedCells, rankedCell)
 			uid++
 		}
 	}
@@ -35,78 +35,58 @@ func makeRankedCells(relation RelationIndex) CellPointers {
 
 // returns the best cell form a list of cells with potentials
 // requires that the cells are a sorted heap
-func getBestCell(cellHeap *CellPointers) *Cell {
-	bestCoverage := 0
+func updateBestCellHeap(cellHeap *CellHeap) {
+	bestValue := 0
 
 	cell := (*cellHeap)[0]
-	for cell.potential > bestCoverage {
-		coverage := cell.recomputeCoverage()
+	for cell.potential > bestValue {
+		value := cell.recomputeCoverage()
+
 		heap.Fix(cellHeap, 0)
-		if coverage > bestCoverage {
-			bestCoverage = coverage
+
+		if value > bestValue {
+			bestValue = value
 		}
 		cell = (*cellHeap)[0]
 	}
-
-	return (*cellHeap)[0]
 }
 
 // returns nil if no cell could be found that improves the formula
 // requires cells to be a heap
-func getBestFormulaCell(formulaRankedCells *CellPointers, formula *Formula) *Cell {
+func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool {
 	// the best improvement in coverage for any cell
 	bestDiff := 0
+	bestValue := 0
 
-	var bestCell *Cell
-
-	for _, cell := range *formulaRankedCells {
-		if formula.skipTheseCells.Has(cell.uid) {
-			dbg.Println("Skipping cell")
-			continue
-		}
-
-		if cell.attribute.attributeType == single && formula.usedSingleAttributes.Contains(cell.attribute.index) {
+	cell := (*formulaCellHeap)[0]
+	for cell.potential > bestValue {
+		if cell.cell.attribute.attributeType == single && formula.usedSingleAttributes.Contains(cell.cell.attribute.index) {
 			// the formula already has a value assigned to this attribute
-			// todo: cound delete here
 			dbg.Println("Ignoring single attribute cell", cell)
-			formula.skipTheseCells.Insert(cell.uid)
+			formulaCellHeap.Pop()
 			continue
 		}
 
-		// how much does adding the cell to the formula change the coverage
-		valueDiff := 0
-		cell.formulaPotential = 0
+		value, valueDiff := cell.recomputeFormulaCoverage(formula)
 
-		// todo: what if we do the inverse?
-		for tuple, value := range formula.tupleValue {
-			covered, has := (*cell.cover)[tuple]
-			if has {
-				// no conflict
-				if !covered {
-					// and cell is not yet covered, great
-					valueDiff++
-					cell.formulaPotential++
-				}
-			} else {
-				// conflict, need to remove whatever we already have for this tuple
-				valueDiff -= value
-			}
+		if cell.potential+valueDiff != value {
+			fmt.Printf("%d + %d != %d", cell.potential, valueDiff, value)
 		}
 
-		dbg.Printf("Adding cell %s adds %d and has potential %d", cell, valueDiff, cell.formulaPotential)
+		heap.Fix(formulaCellHeap, 0)
 
-		if valueDiff > bestDiff {
-			bestCell = cell
-			bestDiff = valueDiff
+		if value > bestValue {
+			bestValue = value
 		}
+		cell = (*formulaCellHeap)[0]
 	}
 
-	if bestDiff == 0 {
+	if bestDiff <= 0 {
 		info.Println("Looks like we cannot find a cell that should be added")
-		return nil
+		return false
 	}
 
-	return bestCell
+	return true
 }
 
 // Summarize summarizes
@@ -125,39 +105,38 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		fmt.Println("==============================")
 
 		// add new formula with best cell
-		cell := getBestCell(&rankedCells)
+		updateBestCellHeap(&rankedCells)
 
-		if cell.potential < 0 {
+		if rankedCells[0].potential <= 0 {
 			info.Println("Adding a new cell to the formula doesn't help. Let's stop right here.")
 			break
 		}
 
-		formula := NewFormula(cell)
-
-		dbg.Printf("Just added a new formula with cell %s\n", cell)
-		fmt.Println(formula.tupleValue)
-
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
-		// note that CellPointers has pointers so we can safely modify the slice but not the cells it points to
-		formulaRankedCells := make(CellPointers, len(rankedCells))
+		// note that CellHeap has pointers so we can safely modify the slice but not the cells it points to
+		formulaRankedCells := make(CellHeap, len(rankedCells))
 		copy(formulaRankedCells, rankedCells)
+
+		formula := NewFormula(*formulaRankedCells[0].cell)
+		formulaRankedCells.Pop()
+
+		dbg.Printf("Just added a new formula with cell %s\n", *formulaRankedCells[0].cell)
+		fmt.Println(formula.tupleValue)
 
 		// keep adding to formula
 		for true {
 			fmt.Println("--------------------------------")
 
-			bestCell := getBestFormulaCell(&formulaRankedCells, formula)
+			updateFormulaBestCellHeap(&formulaRankedCells, formula)
 
-			if bestCell == nil {
+			if rankedCells[0].potential <= 0 {
 				break
 			}
 
-			dbg.Printf("Now skipping %d cells\n", formula.skipTheseCells.Len())
-
 			// add cell to formula
-			formula.AddCell(bestCell)
+			formula.AddCell(*formulaRankedCells[0].cell)
 
-			info.Printf("Just added a new cell (%s) to the formula\n", bestCell)
+			info.Printf("Just added a new cell (%s) to the formula\n", *formulaRankedCells[0].cell)
 		}
 
 		fmt.Println("#############")

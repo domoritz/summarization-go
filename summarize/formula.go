@@ -3,8 +3,6 @@ package summarize
 import (
 	"bytes"
 	"fmt"
-
-	"golang.org/x/tools/container/intsets"
 )
 
 // TupleValues gives us the value for each tuple
@@ -12,20 +10,19 @@ type TupleValues map[int]int
 
 // Formula is a map from attribute id to lists of cells
 type Formula struct {
-	cells                CellPointers // list of cells
-	tupleValue           TupleValues  // how much does a tuple contribute to the formula
-	usedSingleAttributes Set          // which single attributes are already used
-	skipTheseCells       intsets.Sparse
+	cells                []Cell      // list of cells
+	tupleValue           TupleValues // how much does a tuple contribute to the formula
+	usedSingleAttributes Set         // which single attributes are already used
 }
 
 // NewFormula creates a new formula from a cell
-func NewFormula(cell *Cell) *Formula {
+func NewFormula(cell Cell) *Formula {
 	var formula Formula
 
 	formula.usedSingleAttributes = make(Set)
 	formula.tupleValue = make(TupleValues)
 
-	for tuple, covered := range *cell.cover {
+	for tuple, covered := range cell.cover {
 		if !covered {
 			formula.tupleValue[tuple] = 1
 		} else {
@@ -38,10 +35,8 @@ func NewFormula(cell *Cell) *Formula {
 	return &formula
 }
 
-func (formula *Formula) addCellNoUpdateValues(cell *Cell) {
+func (formula *Formula) addCellNoUpdateValues(cell Cell) {
 	formula.cells = append(formula.cells, cell)
-
-	formula.skipTheseCells.Insert(cell.uid)
 
 	// if the cell is a single, add attribute to exclude list
 	if cell.attribute.attributeType == single {
@@ -50,12 +45,12 @@ func (formula *Formula) addCellNoUpdateValues(cell *Cell) {
 }
 
 // AddCell adds a cell to the formula and updates internals
-func (formula *Formula) AddCell(cell *Cell) {
+func (formula *Formula) AddCell(cell Cell) {
 	formula.addCellNoUpdateValues(cell)
 
 	// TODO: is other direction faster?
 	for tuple := range formula.tupleValue {
-		if _, has := (*cell.cover)[tuple]; !has {
+		if _, has := cell.cover[tuple]; !has {
 			delete(formula.tupleValue, tuple)
 		} else {
 			formula.tupleValue[tuple]++
@@ -68,9 +63,9 @@ func (formula *Formula) CoverIndex(relation *RelationIndex) {
 	// TODO: is other direction faster?
 	for _, cell := range formula.cells {
 		for tuple := range formula.tupleValue {
-			if covered, has := (*cell.cover)[tuple]; has && !covered {
+			if covered, has := cell.cover[tuple]; has && !covered {
 				// set uncovered to covered
-				(*cell.cover)[tuple] = true
+				cell.cover[tuple] = true
 			}
 		}
 	}

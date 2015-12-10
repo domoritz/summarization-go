@@ -9,10 +9,11 @@ import (
 
 // Attribute is an attribute
 type Attribute struct {
-	index         int                    // a number for this attribute
-	attributeType Type                   // attribute type
-	attributeName string                 // attribute name
-	tuples        map[string]*TupleCover // TODO: make slice
+	index         int            // id for this attribute, used to see what attributes have been used in formula
+	attributeType Type           // attribute type
+	attributeName string         // attribute name
+	valueIndex    map[string]int // index for attribute values
+	cells         []Cell         // values and what tuples are covered
 }
 
 // RelationIndex is an inverted index
@@ -20,6 +21,22 @@ type RelationIndex struct {
 	attrs     []Attribute
 	numTuples int
 	numValues int
+}
+
+func addCell(attr *Attribute, value string, tuple int) bool {
+	added := false
+
+	idx, has := attr.valueIndex[value]
+	if !has {
+		c := MakeCell(attr, value)
+		c.cover[tuple] = false
+		attr.valueIndex[value] = len(attr.cells)
+		attr.cells = append(attr.cells, c)
+		added = true
+	} else {
+		attr.cells[idx].cover[tuple] = false
+	}
+	return added
 }
 
 // NewIndexFromString creates a relation index from a string
@@ -51,7 +68,7 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 
 		index[i].attributeName = names[i]
 		index[i].index = i
-		index[i].tuples = make(map[string]*TupleCover)
+		index[i].valueIndex = make(map[string]int)
 	}
 
 	numTuples := len(lines[2:])
@@ -65,7 +82,6 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 		}
 
 		for i, value := range values {
-			attr := index[i]
 			value = strings.TrimSpace(value)
 
 			if len(value) == 0 {
@@ -73,26 +89,16 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 				continue
 			}
 
-			switch attr.attributeType {
+			switch index[i].attributeType {
 			case single:
-				if tc, has := attr.tuples[value]; !has {
-					c := make(TupleCover)
-					c[tuple] = false
-					attr.tuples[value] = &c
+				if addCell(&index[i], value, tuple) {
 					numValues++
-				} else {
-					(*tc)[tuple] = false
 				}
 			case set:
 				setValues := strings.Split(value, " ")
 				for _, setValue := range setValues {
-					if tc, has := attr.tuples[setValue]; !has {
-						c := make(TupleCover)
-						c[tuple] = false
-						attr.tuples[setValue] = &c
+					if addCell(&index[i], setValue, tuple) {
 						numValues++
-					} else {
-						(*tc)[tuple] = false
 					}
 				}
 			case hierarchy:
@@ -100,13 +106,8 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 				hValues := strings.Split(value, " ")
 				for _, hValue := range hValues {
 					prefix += hValue
-					if tc, has := attr.tuples[prefix]; !has {
-						c := make(TupleCover)
-						c[tuple] = false
-						attr.tuples[prefix] = &c
+					if addCell(&index[i], prefix, tuple) {
 						numValues++
-					} else {
-						(*tc)[tuple] = false
 					}
 				}
 			}
@@ -121,10 +122,10 @@ func (relation RelationIndex) String() string {
 	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples, %d values):\n", len(relation.attrs), relation.numTuples, relation.numValues))
 	for _, attribute := range relation.attrs {
 		buffer.WriteString(fmt.Sprintf("Attribute %s (%s):\n", attribute.attributeName, attribute.attributeType))
-		for value, cover := range attribute.tuples {
-			buffer.WriteString(fmt.Sprintf("Value %s covers: [", value))
+		for _, cell := range attribute.cells {
+			buffer.WriteString(fmt.Sprintf("Value %s covers: [", cell.value))
 			var tuples []string
-			for tuple, covered := range *cover {
+			for tuple, covered := range cell.cover {
 				tuples = append(tuples, fmt.Sprintf("%d: %s", tuple, bString(covered)))
 			}
 

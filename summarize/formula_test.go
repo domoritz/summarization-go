@@ -3,11 +3,10 @@ package summarize
 import "testing"
 
 func TestCreate(t *testing.T) {
-	cover := TupleCover{0: true, 1: false}
-	attribute := Attribute{0, set, "x", nil}
-	cell := Cell{0, &attribute, "a", &cover, 0, 0}
+	attribute := Attribute{0, set, "x", nil, nil}
+	cell := Cell{TupleCover{0: true, 1: false}, &attribute, "a"}
 
-	formula := NewFormula(&cell)
+	formula := NewFormula(cell)
 
 	if formula.tupleValue[0] != 0 {
 		t.Error("Should have value")
@@ -16,10 +15,9 @@ func TestCreate(t *testing.T) {
 		t.Error("Should not have value")
 	}
 
-	cover2 := TupleCover{1: false, 2: true}
-	attribute2 := Attribute{0, set, "y", nil}
-	cell2 := Cell{0, &attribute2, "a", &cover2, 0, 0}
-	formula.AddCell(&cell2)
+	attribute2 := Attribute{0, set, "x", nil, nil}
+	cell2 := Cell{TupleCover{1: false, 2: true}, &attribute2, "a"}
+	formula.AddCell(cell2)
 
 	if _, has := formula.tupleValue[0]; has {
 		t.Error("Should not have value")
