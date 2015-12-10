@@ -5,13 +5,13 @@ import (
 	"fmt"
 )
 
-// TupleValues gives us the value for each tuple
-type TupleValues map[int]int
+// TupleCovers gives us the value for each tuple
+type TupleCovers map[int]int
 
 // Formula is a map from attribute id to lists of cells
 type Formula struct {
 	cells                []Cell      // list of cells
-	tupleValue           TupleValues // how much does a tuple contribute to the formula
+	tupleCover           TupleCovers // how much does a tuple contribute to the formula
 	usedSingleAttributes Set         // which single attributes are already used
 }
 
@@ -20,13 +20,13 @@ func NewFormula(cell Cell) *Formula {
 	var formula Formula
 
 	formula.usedSingleAttributes = make(Set)
-	formula.tupleValue = make(TupleValues)
+	formula.tupleCover = make(TupleCovers)
 
 	for tuple, covered := range cell.cover {
 		if !covered {
-			formula.tupleValue[tuple] = 1
+			formula.tupleCover[tuple] = 1
 		} else {
-			formula.tupleValue[tuple] = 0
+			formula.tupleCover[tuple] = 0
 		}
 	}
 
@@ -49,11 +49,11 @@ func (formula *Formula) AddCell(cell Cell) {
 	formula.addCellNoUpdateValues(cell)
 
 	// TODO: is other direction faster?
-	for tuple := range formula.tupleValue {
+	for tuple := range formula.tupleCover {
 		if _, has := cell.cover[tuple]; !has {
-			delete(formula.tupleValue, tuple)
+			delete(formula.tupleCover, tuple)
 		} else {
-			formula.tupleValue[tuple]++
+			formula.tupleCover[tuple]++
 		}
 	}
 }
@@ -62,7 +62,7 @@ func (formula *Formula) AddCell(cell Cell) {
 func (formula *Formula) CoverIndex(relation *RelationIndex) {
 	// TODO: is other direction faster?
 	for _, cell := range formula.cells {
-		for tuple := range formula.tupleValue {
+		for tuple := range formula.tupleCover {
 			if covered, has := cell.cover[tuple]; has && !covered {
 				// set uncovered to covered
 				cell.cover[tuple] = true
@@ -71,7 +71,7 @@ func (formula *Formula) CoverIndex(relation *RelationIndex) {
 	}
 }
 
-func (values TupleValues) String() string {
+func (values TupleCovers) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("Tuple Value (%d):\n", len(values)))
 	for i, values := range values {

@@ -10,7 +10,7 @@ type RankedCell struct {
 	cell *Cell // pointer to cell
 
 	// potential is what the cell can cover in the whole relation
-	// constraint: potential must always be higher than actual value
+	// constraint: potential must always be higher than actual cover
 	potential int
 }
 
@@ -40,12 +40,18 @@ func (cells *CellHeap) Push(x interface{}) {
 func (cells *CellHeap) Pop() interface{} {
 	old := *cells
 	n := len(old)
-	x := old[n-1]
+	item := old[n-1]
 	*cells = old[0 : n-1]
-	return x
+	return item
+}
+
+// Peek returns a pointer to the best cell
+func (cells CellHeap) Peek() *RankedCell {
+	return &cells[0]
 }
 
 // recomputes how much the tuple covers
+// returns the potential
 func (cell *RankedCell) recomputeCoverage() int {
 	before := cell.potential
 
@@ -63,24 +69,26 @@ func (cell *RankedCell) recomputeCoverage() int {
 	return cell.potential
 }
 
+// recomputes what this cell covers in the context of the formula
+// returns the actual cell cover and the difference in cover for the formula
 func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) (int, int) {
 	before := cell.potential
 
-	valueDiff := 0
+	coverDiff := 0
 	cell.potential = 0
 
-	for tuple, value := range formula.tupleValue {
+	for tuple, cover := range formula.tupleCover {
 		covered, has := cell.cell.cover[tuple]
 		if has {
 			// no conflict
 			if !covered {
 				// and cell is not yet covered, great
-				valueDiff++
+				coverDiff++
 				cell.potential++
 			}
 		} else {
 			// conflict, need to remove whatever we already have for this tuple
-			valueDiff -= value
+			coverDiff -= cover
 		}
 	}
 
@@ -88,7 +96,7 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) (int, int) {
 		panic("not smaller")
 	}
 
-	return cell.potential, valueDiff
+	return cell.potential, coverDiff
 }
 
 func (cells CellHeap) String() string {
