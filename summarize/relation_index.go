@@ -18,12 +18,17 @@ type Attribute struct {
 
 // RelationIndex is an inverted index
 type RelationIndex struct {
-	attrs     []Attribute
-	numTuples int
-	numValues int
+	attrs     []Attribute // the attributes
+	numTuples int         // not really needed
 }
 
-func addCell(attr *Attribute, value string, tuple int) bool {
+// Attrs returns the attributes
+func (relation RelationIndex) Attrs() *[]Attribute {
+	return &relation.attrs
+}
+
+// AddCell adds a cell to an attribute
+func (attr *Attribute) AddCell(value string, tuple int) bool {
 	added := false
 
 	idx, has := attr.valueIndex[value]
@@ -39,6 +44,35 @@ func addCell(attr *Attribute, value string, tuple int) bool {
 	return added
 }
 
+// NewIndex creates a new index
+func NewIndex(typeNames []string, names []string, numTuples int) (*RelationIndex, error) {
+	if len(names) != len(typeNames) {
+		err := fmt.Sprintf("Mismatching number of names and types. %d != %d", len(names), len(typeNames))
+		return nil, errors.New(err)
+	}
+
+	index := make([]Attribute, len(typeNames))
+
+	for i, attributeType := range typeNames {
+		attr := &index[i]
+
+		switch attributeType {
+		case single.String():
+			attr.attributeType = single
+		case set.String():
+			attr.attributeType = set
+		case hierarchy.String():
+			attr.attributeType = hierarchy
+		}
+
+		attr.attributeName = names[i]
+		attr.index = i
+		attr.valueIndex = make(map[string]int)
+	}
+
+	return &RelationIndex{index, numTuples}, nil
+}
+
 // NewIndexFromString creates a relation index from a string
 func NewIndexFromString(description string) (*RelationIndex, error) {
 	lines := strings.Split(description, "\n")
@@ -46,33 +80,13 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 	typeNames := strings.Split(lines[0], ",")
 	names := strings.Split(lines[1], ",")
 
-	if len(names) != len(typeNames) {
-		err := fmt.Sprintf("Mismatching number of names and types. %d != %d", len(names), len(typeNames))
-		return nil, errors.New(err)
+	relation, err := NewIndex(typeNames, names, len(lines[2:]))
+	if err != nil {
+		return nil, err
 	}
 
-	numAttr := len(typeNames)
-
-	index := make([]Attribute, numAttr)
-
-	for i, typeName := range typeNames {
-		typeName = strings.TrimSpace(typeName)
-		switch typeName {
-		case single.String():
-			index[i].attributeType = single
-		case set.String():
-			index[i].attributeType = set
-		case hierarchy.String():
-			index[i].attributeType = hierarchy
-		}
-
-		index[i].attributeName = names[i]
-		index[i].index = i
-		index[i].valueIndex = make(map[string]int)
-	}
-
-	numTuples := len(lines[2:])
-	numValues := 0
+	index := relation.attrs
+	numAttr := len(index)
 
 	for tuple, line := range lines[2:] {
 		values := strings.Split(line, ",")
@@ -91,35 +105,29 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 
 			switch index[i].attributeType {
 			case single:
-				if addCell(&index[i], value, tuple) {
-					numValues++
-				}
+				index[i].AddCell(value, tuple)
 			case set:
 				setValues := strings.Split(value, " ")
 				for _, setValue := range setValues {
-					if addCell(&index[i], setValue, tuple) {
-						numValues++
-					}
+					index[i].AddCell(setValue, tuple)
 				}
 			case hierarchy:
 				prefix := ""
 				hValues := strings.Split(value, " ")
 				for _, hValue := range hValues {
 					prefix += hValue
-					if addCell(&index[i], prefix, tuple) {
-						numValues++
-					}
+					index[i].AddCell(prefix, tuple)
 				}
 			}
 		}
 	}
 
-	return &RelationIndex{index, numTuples, numValues}, nil
+	return relation, nil
 }
 
 func (relation RelationIndex) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples, %d values):\n", len(relation.attrs), relation.numTuples, relation.numValues))
+	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples):\n", len(relation.attrs), relation.numTuples))
 	for _, attribute := range relation.attrs {
 		buffer.WriteString(fmt.Sprintf("Attribute %s (%s):\n", attribute.attributeName, attribute.attributeType))
 		for _, cell := range attribute.cells {

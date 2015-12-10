@@ -24,7 +24,7 @@ type Value struct {
 type Summary [][]Value
 
 func makeRankedCells(relation RelationIndex) CellHeap {
-	rankedCells := make(CellHeap, 0, relation.numValues)
+	var rankedCells CellHeap
 	for _, attr := range relation.attrs {
 		for i := range attr.cells {
 			cell := &attr.cells[i]
