@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
+
+	"github.com/olekukonko/tablewriter"
 )
 
 var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
@@ -183,4 +186,42 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 	fmt.Printf("Formulas cover %v = %d\n", formulaCover, summaryCover)
 	return summary
+}
+
+// DebugPrint prints a summary
+func (summary Summary) DebugPrint() {
+	table := tablewriter.NewWriter(os.Stdout)
+
+	// provides positions
+	header := make(map[string]int)
+
+	for _, cells := range summary {
+		for _, cell := range cells {
+			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
+			header[key] = 0
+		}
+	}
+
+	names := make([]string, 0, len(header))
+	for name := range header {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	table.SetHeader(names)
+
+	for i, name := range names {
+		header[name] = i
+	}
+
+	for _, cells := range summary {
+		values := make([]string, len(names))
+		for _, cell := range cells {
+			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
+			values[header[key]] += cell.value + " "
+		}
+		table.Append(values)
+	}
+
+	table.Render()
 }
