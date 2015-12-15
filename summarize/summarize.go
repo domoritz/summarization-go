@@ -65,7 +65,7 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 
 	for len(*formulaCellHeap) > 0 && formulaCellHeap.Peek().potential > bestCover {
 		cell := formulaCellHeap.Peek()
-		if cell.cell.attribute.attributeType == single && formula.usedSingleAttributes.Contains(cell.cell.attribute.index) {
+		if cell.cell.attribute.attributeType == single && formula.usedSingleAttributes.Has(cell.cell.attribute.index) {
 			// the formula already has a value assigned to this attribute
 			heap.Pop(formulaCellHeap)
 			continue

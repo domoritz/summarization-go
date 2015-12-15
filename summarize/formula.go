@@ -3,6 +3,8 @@ package summarize
 import (
 	"bytes"
 	"fmt"
+
+	"golang.org/x/tools/container/intsets"
 )
 
 // TupleCovers gives us the value for each tuple
@@ -10,16 +12,15 @@ type TupleCovers map[int]int
 
 // Formula is a map from attribute id to lists of cells
 type Formula struct {
-	cells                []Cell      // list of cells
-	tupleCover           TupleCovers // how much does a tuple contribute to the formula
-	usedSingleAttributes Set         // which single attributes are already used
+	cells                []Cell         // list of cells
+	tupleCover           TupleCovers    // how much does a tuple contribute to the formula
+	usedSingleAttributes intsets.Sparse // which single attributes are already used
 }
 
 // NewFormula creates a new formula from a cell
 func NewFormula(cell Cell) *Formula {
 	var formula Formula
 
-	formula.usedSingleAttributes = make(Set)
 	formula.tupleCover = make(TupleCovers)
 
 	for tuple, covered := range cell.cover {
@@ -40,7 +41,7 @@ func (formula *Formula) addCellNoUpdateValues(cell Cell) {
 
 	// if the cell is a single, add attribute to exclude list
 	if cell.attribute.attributeType == single {
-		formula.usedSingleAttributes.Add(cell.attribute.index)
+		formula.usedSingleAttributes.Insert(cell.attribute.index)
 	}
 }
 
