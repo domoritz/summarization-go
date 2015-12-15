@@ -74,9 +74,9 @@ func (formula *Formula) CoverIndex(relation *RelationIndex) {
 
 func (values TupleCovers) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Tuple Value (%d):\n", len(values)))
+	fmt.Fprintf(&buffer, "Tuple Value (%d):\n", len(values))
 	for i, values := range values {
-		buffer.WriteString(fmt.Sprintf("%d: %d\n", i, values))
+		fmt.Fprintf(&buffer, "%d: %d\n", i, values)
 	}
 	return buffer.String()
 }

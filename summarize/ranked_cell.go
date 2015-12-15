@@ -96,15 +96,15 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) (int, int) {
 
 func (cells CellHeap) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Cells (%d):\n", len(cells)))
+	fmt.Fprintf(&buffer, "Cells (%d):\n", len(cells))
 	for _, cell := range cells {
-		buffer.WriteString(fmt.Sprintf("%s\n", cell))
+		fmt.Fprintf(&buffer, "%s\n", cell)
 	}
 	return buffer.String()
 }
 
 func (cell RankedCell) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("%s (%d)", cell.cell, cell.potential))
+	fmt.Fprintf(&buffer, "%s (%d)", cell.cell, cell.potential)
 	return buffer.String()
 }

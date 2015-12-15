@@ -24,6 +24,6 @@ func MakeCell(attr *Attribute, value string) Cell {
 
 func (cell Cell) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Attr %s: %s", cell.attribute.attributeName, cell.value))
+	fmt.Fprintf(&buffer, "Attr %s: %s", cell.attribute.attributeName, cell.value)
 	return buffer.String()
 }

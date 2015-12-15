@@ -127,11 +127,11 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 
 func (relation RelationIndex) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Relation Index (%d attributes, %d tuples):\n", len(relation.attrs), relation.numTuples))
+	fmt.Fprintf(&buffer, "Relation Index (%d attributes, %d tuples):\n", len(relation.attrs), relation.numTuples)
 	for _, attribute := range relation.attrs {
-		buffer.WriteString(fmt.Sprintf("Attribute %s (%s):\n", attribute.attributeName, attribute.attributeType))
+		fmt.Fprintf(&buffer, "Attribute %s (%s):\n", attribute.attributeName, attribute.attributeType)
 		for _, cell := range attribute.cells {
-			buffer.WriteString(fmt.Sprintf("Value %s covers: [", cell.value))
+			fmt.Fprintf(&buffer, "Value %s covers: [", cell.value)
 			var tuples []string
 			for tuple, covered := range cell.cover {
 				tuples = append(tuples, fmt.Sprintf("%d:%s", tuple, bString(covered)))
