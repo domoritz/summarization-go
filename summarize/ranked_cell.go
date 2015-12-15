@@ -53,17 +53,12 @@ func (cells CellHeap) Peek() *RankedCell {
 // recomputes how much the tuple covers
 // returns the potential
 func (cell *RankedCell) recomputeCoverage() int {
-	before := cell.potential
-
 	cell.potential = 0
+
 	for _, covered := range cell.cell.cover {
 		if !covered {
 			cell.potential++
 		}
-	}
-
-	if before < cell.potential {
-		panic("not smaller")
 	}
 
 	return cell.potential
