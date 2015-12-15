@@ -17,6 +17,4 @@ func main() {
 
 	fmt.Println("Summary:")
 	summary.DebugPrint()
-
-	fmt.Println("🐙")
 }
