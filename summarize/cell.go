@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// TupleCover is a map from tuple index to how much the tuple contributes
+// TupleCover is a map from tuple index to whether the tuple covers it
 type TupleCover map[int]bool
 
 // Cell is a cell

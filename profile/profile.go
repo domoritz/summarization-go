@@ -15,9 +15,19 @@ var cpuprofile = flag.String("cpuprofile", "cpu.prof", "write cpu profile to fil
 var memprofile = flag.String("memprofile", "mem.prof", "write memory profile to this file")
 
 func main() {
+	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	types := []string{"single", "single", "single", "set", "set"}
 	names := []string{"s0", "s1", "s2", "set0", "set1"}
-	numTuples := 1000
+	numTuples := 100000
 
 	relation, err := summarize.NewIndex(types, names, numTuples)
 	if err != nil {
@@ -34,20 +44,15 @@ func main() {
 		for j := 0; j < 3; j++ {
 			(*attrs)[3].AddCell(randomdata.City(), i)
 		}
-		for j := 0; j < 5; j++ {
+		for j := 0; j < 6; j++ {
 			(*attrs)[4].AddCell(randomdata.State(randomdata.Large), i)
 		}
 	}
 
-	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
+	summary := relation.Summarize(200)
+
+	fmt.Println("Summary:")
+	summary.DebugPrint()
 
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
@@ -58,9 +63,4 @@ func main() {
 		f.Close()
 		return
 	}
-
-	summary := relation.Summarize(100)
-
-	fmt.Println("Summary:")
-	summary.DebugPrint()
 }
