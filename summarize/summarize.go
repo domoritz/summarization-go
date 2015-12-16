@@ -51,7 +51,7 @@ func updateBestCellHeap(cellHeap *CellHeap) bool {
 		}
 	}
 
-	return bestCover != 0
+	return bestCover > 0
 }
 
 // returns nil if no cell could be found that improves the formula
@@ -175,7 +175,11 @@ func (summary Summary) DebugPrint() {
 		values := make([]string, len(names))
 		for _, cell := range cells {
 			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
-			values[header[key]] += cell.value + " "
+			prefix := ""
+			if len(values[header[key]]) > 0 {
+				prefix = ", "
+			}
+			values[header[key]] += prefix + cell.value
 		}
 		table.Append(values)
 	}

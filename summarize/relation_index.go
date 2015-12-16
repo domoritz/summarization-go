@@ -129,9 +129,9 @@ func (relation RelationIndex) String() string {
 	var buffer bytes.Buffer
 	fmt.Fprintf(&buffer, "Relation Index (%d attributes, %d tuples):\n", len(relation.attrs), relation.numTuples)
 	for _, attribute := range relation.attrs {
-		fmt.Fprintf(&buffer, "Attribute %s (%s):\n", attribute.attributeName, attribute.attributeType)
+		fmt.Fprintf(&buffer, "Attribute %s (%s) of length %d:\n", attribute.attributeName, attribute.attributeType, len(attribute.cells))
 		for _, cell := range attribute.cells {
-			fmt.Fprintf(&buffer, "Value %s covers: [", cell.value)
+			fmt.Fprintf(&buffer, " Value '%s' covers: [", cell.value)
 			var tuples []string
 			for tuple, covered := range cell.cover {
 				tuples = append(tuples, fmt.Sprintf("%d:%s", tuple, bString(covered)))

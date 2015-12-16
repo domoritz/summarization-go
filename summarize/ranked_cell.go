@@ -65,7 +65,7 @@ func (cell *RankedCell) recomputeCoverage() int {
 }
 
 // recomputes what this cell covers in the context of the formula
-// returns the actual cell cover and the difference in cover for the formula
+// returns the new formula cover and the cell cover
 func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) (int, int) {
 	before := cell.potential
 
@@ -103,6 +103,10 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) (int, int) {
 
 	if before < cell.potential {
 		panic("not smaller")
+	}
+
+	if formulaCover < cell.potential {
+		panic("potential is too large")
 	}
 
 	return formulaCover, cell.potential
