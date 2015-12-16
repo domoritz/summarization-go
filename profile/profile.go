@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -55,7 +54,6 @@ func main() {
 	elapsed := time.Since(start)
 	log.Printf("Summary took %s\n", elapsed)
 
-	fmt.Println("Summary:")
 	summary.DebugPrint()
 
 	if *memprofile != "" {

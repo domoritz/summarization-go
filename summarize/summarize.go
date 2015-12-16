@@ -22,6 +22,13 @@ type Value struct {
 // Summary is a summary
 type Summary [][]Value
 
+// SummaryResult packs a summary
+type SummaryResult struct {
+	Summary      Summary // the summary
+	FormulaCover []int   // how much each formula covers
+	SummaryCover int     // sum of tupleCover
+}
+
 func makeRankedCells(relation RelationIndex) CellHeap {
 	var rankedCells CellHeap
 	for _, attr := range relation.attrs {
@@ -89,7 +96,7 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 }
 
 // Summarize summarizes
-func (relation RelationIndex) Summarize(size int) Summary {
+func (relation RelationIndex) Summarize(size int) SummaryResult {
 	var formulaCover []int
 	summaryCover := 0
 	var summary Summary
@@ -154,18 +161,23 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		summary = append(summary, values)
 	}
 
-	fmt.Printf("Formulas cover %v = %d\n", formulaCover, summaryCover)
-	return summary
+	return SummaryResult{
+		summary,
+		formulaCover,
+		summaryCover,
+	}
 }
 
 // DebugPrint prints a summary
-func (summary Summary) DebugPrint() {
+func (summary SummaryResult) DebugPrint() {
+	fmt.Printf("Summary (covers %d attributes):\n", summary.SummaryCover)
+
 	table := tablewriter.NewWriter(os.Stdout)
 
 	// provides positions
 	header := make(map[string]int)
 
-	for _, cells := range summary {
+	for _, cells := range summary.Summary {
 		for _, cell := range cells {
 			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
 			header[key] = 0
@@ -177,19 +189,19 @@ func (summary Summary) DebugPrint() {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	names = append(names, "#")
-	names = append(names, "count")
+	names = append(names, "cover")
+	names = append(names, "# cells")
 
 	table.SetHeader(names)
-	table.SetAutoWrapText(false)
+	table.SetColWidth(100)
 
 	for i, name := range names[0:len(header)] {
 		header[name] = i
 	}
 
-	for i, cells := range summary {
+	for i, cells := range summary.Summary {
 		values := make([]string, len(names))
-		values[len(values)-2] = fmt.Sprintf("%d", i)
+		values[len(values)-2] = fmt.Sprintf("%d", summary.FormulaCover[i])
 		for _, cell := range cells {
 			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
 			prefix := ""

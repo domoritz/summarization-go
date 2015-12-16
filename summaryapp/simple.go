@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/domoritz/summarization-go/summarize"
@@ -14,7 +13,5 @@ func main() {
 	}
 
 	summary := relation.Summarize(3)
-
-	fmt.Println("Summary:")
 	summary.DebugPrint()
 }

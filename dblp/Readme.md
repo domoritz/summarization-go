@@ -1,3 +1,6 @@
+Uses SQLite full text search as described in https://sqlite.org/fts3.html.
+
+
 The program expects a table with the following schema.
 
 ```sql
