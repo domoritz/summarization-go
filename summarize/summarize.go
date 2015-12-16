@@ -29,7 +29,7 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 			cell := &attr.cells[i]
 			potential := len(cell.cover)
 			// todo; we may be able to ignore if we add regularization
-			rankedCell := RankedCell{cell, potential}
+			rankedCell := RankedCell{cell, potential, potential}
 			rankedCells = append(rankedCells, rankedCell)
 		}
 	}
@@ -57,13 +57,10 @@ func updateBestCellHeap(cellHeap *CellHeap) bool {
 // returns nil if no cell could be found that improves the formula
 // requires cells to be a heap
 func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool {
-	// diff of the coverage of the whole formula
-	bestDiff := 0
+	// the largest change that a cell can do
+	bestCover := 0
 
-	// cover of a single cell
-	bestCellCover := 0
-
-	for len(*formulaCellHeap) > 0 && formulaCellHeap.Peek().potential > bestCellCover {
+	for len(*formulaCellHeap) > 0 && formulaCellHeap.Peek().potential > bestCover {
 		cell := formulaCellHeap.Peek()
 		if cell.cell.attribute.attributeType == single && formula.usedSingleAttributes.Has(cell.cell.attribute.index) {
 			// the formula already has a value assigned to this attribute
@@ -71,20 +68,24 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 			continue
 		}
 
-		formulaCover, cellCover := cell.recomputeFormulaCoverage(formula)
+		cellCover := cell.recomputeFormulaCoverage(formula)
 
-		heap.Fix(formulaCellHeap, 0)
+		if cell.maxPotential <= 0 {
+			// looks like there is no overlap between what tuples the formula and the cell cover
+			heap.Pop(formulaCellHeap)
+			continue
+		}
 
-		if cellCover > bestCellCover {
-			// update cover so that we can escape early
-			bestCellCover = cellCover
-			bestDiff = formulaCover - formula.cover
+		if cellCover > bestCover {
+			bestCover = cellCover
 		}
 	}
 
-	if bestDiff <= 0 || len(*formulaCellHeap) == 0 {
+	if bestCover <= 0 || len(*formulaCellHeap) == 0 {
 		return false
 	}
+
+	fmt.Println("we should add", formulaCellHeap.Peek(), bestCover)
 
 	return true
 }
@@ -120,6 +121,12 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 			if !improved {
 				break
+			} else {
+				// have to reset the potentials because we will reduce the set of tuples that the formula covers
+				for i := range formulaRankedCells {
+					formulaRankedCells[i].potential = cell.maxPotential
+				}
+				heap.Init(&formulaRankedCells)
 			}
 
 			// add cell to formula
@@ -132,6 +139,14 @@ func (relation RelationIndex) Summarize(size int) Summary {
 
 		formulaCover = append(formulaCover, formula.cover)
 		summaryCover += formula.cover
+
+		// if the formula has only one cell, we can pop that one off the heap beacuse nothing can every use it again
+		if len(formula.cells) == 1 {
+			if rankedCells.Peek().cell.value != formula.cells[0].value {
+				panic("assert")
+			}
+			heap.Pop(&rankedCells)
+		}
 
 		var values []Value
 		for _, cell := range formula.cells {
@@ -164,15 +179,19 @@ func (summary Summary) DebugPrint() {
 		names = append(names, name)
 	}
 	sort.Strings(names)
+	names = append(names, "#")
+	names = append(names, "count")
 
 	table.SetHeader(names)
+	table.SetAutoWrapText(false)
 
-	for i, name := range names {
+	for i, name := range names[0:len(header)] {
 		header[name] = i
 	}
 
-	for _, cells := range summary {
+	for i, cells := range summary {
 		values := make([]string, len(names))
+		values[len(values)-2] = fmt.Sprintf("%d", i)
 		for _, cell := range cells {
 			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
 			prefix := ""
@@ -181,6 +200,7 @@ func (summary Summary) DebugPrint() {
 			}
 			values[header[key]] += prefix + cell.value
 		}
+		values[len(values)-1] = fmt.Sprintf("%d", len(cells))
 		table.Append(values)
 	}
 

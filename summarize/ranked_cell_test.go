@@ -6,8 +6,16 @@ import (
 )
 
 func TestHeap(t *testing.T) {
-	cells := CellHeap{RankedCell{nil, 1}, RankedCell{nil, 3},
-		RankedCell{nil, 3}, RankedCell{nil, 6}, RankedCell{nil, 2}}
+	attr := Attribute{}
+
+	zero := Cell{nil, &attr, "zero"}
+	one := Cell{nil, &attr, "one"}
+	two := Cell{nil, &attr, "two"}
+	three := Cell{nil, &attr, "three"}
+	five := Cell{nil, &attr, "five"}
+
+	cells := CellHeap{RankedCell{&zero, 0, -1}, RankedCell{&one, 1, -1}, RankedCell{&three, 3, -1},
+		RankedCell{&three, 3, -1}, RankedCell{&five, 5, -1}, RankedCell{&two, 2, -1}}
 
 	heap.Init(&cells)
 
