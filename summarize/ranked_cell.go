@@ -72,7 +72,7 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) int {
 	cell.maxPotential = 0 // what the cell can cover at most
 
 	// doing this optimizations saves about 25% time
-	if true || len(formula.tupleCover) <= len(cell.cell.cover) {
+	if len(formula.tupleCover) <= len(cell.cell.cover) {
 		for tuple, cover := range formula.tupleCover {
 			covered, has := cell.cell.cover[tuple]
 			if has {
