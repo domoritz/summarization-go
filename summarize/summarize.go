@@ -61,9 +61,9 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 	bestDiff := 0
 
 	// cover of a single cell
-	bestCover := 0
+	bestCellCover := 0
 
-	for len(*formulaCellHeap) > 0 && formulaCellHeap.Peek().potential > bestCover {
+	for len(*formulaCellHeap) > 0 && formulaCellHeap.Peek().potential > bestCellCover {
 		cell := formulaCellHeap.Peek()
 		if cell.cell.attribute.attributeType == single && formula.usedSingleAttributes.Has(cell.cell.attribute.index) {
 			// the formula already has a value assigned to this attribute
@@ -71,17 +71,14 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 			continue
 		}
 
-		cover, coverDiff := cell.recomputeFormulaCoverage(formula)
+		formulaCover, cellCover := cell.recomputeFormulaCoverage(formula)
 
 		heap.Fix(formulaCellHeap, 0)
 
-		if cover > bestCover {
+		if cellCover > bestCellCover {
 			// update cover so that we can escape early
-			bestCover = cover
-		}
-
-		if coverDiff > bestDiff {
-			bestDiff = coverDiff
+			bestCellCover = cellCover
+			bestDiff = formulaCover - formula.cover
 		}
 	}
 
@@ -102,7 +99,6 @@ func (relation RelationIndex) Summarize(size int) Summary {
 	heap.Init(&rankedCells)
 
 	for len(summary) < size {
-
 		// add new formula with best cell
 		goodFormula := updateBestCellHeap(&rankedCells)
 
@@ -134,12 +130,8 @@ func (relation RelationIndex) Summarize(size int) Summary {
 		// set cover in index
 		formula.CoverIndex(&relation)
 
-		cover := 0
-		for _, tupleCover := range formula.tupleCover {
-			cover += tupleCover
-		}
-		formulaCover = append(formulaCover, cover)
-		summaryCover += cover
+		formulaCover = append(formulaCover, formula.cover)
+		summaryCover += formula.cover
 
 		var values []Value
 		for _, cell := range formula.cells {

@@ -69,21 +69,35 @@ func (cell *RankedCell) recomputeCoverage() int {
 func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) (int, int) {
 	before := cell.potential
 
-	coverDiff := 0
+	formulaCover := 0
 	cell.potential = 0
 
-	for tuple, cover := range formula.tupleCover {
-		covered, has := cell.cell.cover[tuple]
-		if has {
-			// no conflict
-			if !covered {
-				// and cell is not yet covered, great
-				coverDiff++
-				cell.potential++
+	// doing this optimizations saves about 25% time
+	if len(formula.tupleCover) <= len(cell.cell.cover) {
+		for tuple, cover := range formula.tupleCover {
+			covered, has := cell.cell.cover[tuple]
+			if has {
+				formulaCover += cover
+				// no conflict
+				if !covered {
+					// and cell is not yet covered, great
+					cell.potential++
+					formulaCover++
+				}
 			}
-		} else {
-			// conflict, need to remove whatever we already have for this tuple
-			coverDiff -= cover
+		}
+	} else {
+		for tuple, covered := range cell.cell.cover {
+			cover, has := formula.tupleCover[tuple]
+			if has {
+				formulaCover += cover
+				// no conflict
+				if !covered {
+					// and cell is not yet covered, great
+					cell.potential++
+					formulaCover++
+				}
+			}
 		}
 	}
 
@@ -91,7 +105,7 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) (int, int) {
 		panic("not smaller")
 	}
 
-	return cell.potential, coverDiff
+	return formulaCover, cell.potential
 }
 
 func (cells CellHeap) String() string {

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"time"
 
 	"github.com/Pallinder/go-randomdata"
 	"github.com/domoritz/summarization-go/summarize"
@@ -49,7 +50,10 @@ func main() {
 		}
 	}
 
+	start := time.Now()
 	summary := relation.Summarize(200)
+	elapsed := time.Since(start)
+	log.Printf("Summary took %s\n", elapsed)
 
 	fmt.Println("Summary:")
 	summary.DebugPrint()

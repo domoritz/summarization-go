@@ -13,8 +13,9 @@ type TupleCovers map[int]int
 // Formula is a map from attribute id to lists of cells
 type Formula struct {
 	cells                []Cell         // list of cells
-	tupleCover           TupleCovers    // how much does a tuple contribute to the formula
 	usedSingleAttributes intsets.Sparse // which single attributes are already used
+	tupleCover           TupleCovers    // how much does a tuple contribute to the formula
+	cover                int            // how much does this formula cover, sum of valid tupleCover
 }
 
 // NewFormula creates a new formula from a cell
@@ -22,10 +23,12 @@ func NewFormula(cell Cell) *Formula {
 	var formula Formula
 
 	formula.tupleCover = make(TupleCovers)
+	formula.cover = 0
 
 	for tuple, covered := range cell.cover {
 		if !covered {
 			formula.tupleCover[tuple] = 1
+			formula.cover++
 		} else {
 			formula.tupleCover[tuple] = 0
 		}
@@ -52,8 +55,10 @@ func (formula *Formula) AddCell(cell Cell) {
 	// TODO: is other direction faster?
 	for tuple := range formula.tupleCover {
 		if _, has := cell.cover[tuple]; !has {
+			formula.cover -= formula.tupleCover[tuple]
 			delete(formula.tupleCover, tuple)
 		} else {
+			formula.cover++
 			formula.tupleCover[tuple]++
 		}
 	}
