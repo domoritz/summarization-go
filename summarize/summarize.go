@@ -85,8 +85,6 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 		return false
 	}
 
-	fmt.Println("we should add", formulaCellHeap.Peek(), bestCover)
-
 	return true
 }
 
