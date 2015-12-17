@@ -31,13 +31,15 @@ type SummaryResult struct {
 
 func makeRankedCells(relation RelationIndex) CellHeap {
 	var rankedCells CellHeap
+	index := 0
 	for _, attr := range relation.attrs {
 		for i := range attr.cells {
 			cell := &attr.cells[i]
 			potential := len(cell.cover)
 			// todo; we may be able to ignore if we add regularization
-			rankedCell := RankedCell{cell, potential, potential}
-			rankedCells = append(rankedCells, rankedCell)
+			rankedCell := RankedCell{cell, potential, potential, index}
+			rankedCells = append(rankedCells, &rankedCell)
+			index++
 		}
 	}
 	return rankedCells
@@ -45,27 +47,30 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 
 // returns the best cell form a list of cells with potentials
 // requires that the cells are a sorted heap
-func updateBestCellHeap(cellHeap *CellHeap) bool {
+func updateBestCellHeap(cellHeap *CellHeap) (bool, *RankedCell) {
 	bestCover := 0
+	var bestCell *RankedCell
 
 	for len(*cellHeap) > 0 && cellHeap.Peek().potential > bestCover {
 		cell := cellHeap.Peek()
 		cover := cell.recomputeCoverage()
-		heap.Fix(cellHeap, 0)
+		heap.Fix(cellHeap, cell.index)
 
 		if cover > bestCover {
 			bestCover = cover
+			bestCell = cell
 		}
 	}
 
-	return bestCover > 0 && len(*cellHeap) > 0
+	return bestCover > 0 && len(*cellHeap) > 0, bestCell
 }
 
 // returns nil if no cell could be found that improves the formula
 // requires cells to be a heap
-func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool {
+func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) (bool, *RankedCell) {
 	// the largest change that a cell can do
 	bestCover := 0
+	var bestCell *RankedCell
 
 	for len(*formulaCellHeap) > 0 && formulaCellHeap.Peek().potential > bestCover {
 		cell := formulaCellHeap.Peek()
@@ -76,20 +81,23 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 		}
 
 		cellCover := cell.recomputeFormulaCoverage(formula)
-		heap.Fix(formulaCellHeap, 0)
 
 		if cell.maxPotential <= 0 {
 			// looks like there is no overlap between what tuples the formula and the cell cover
+			// this means we can remove it because this cell will not be usable for this formula
 			heap.Pop(formulaCellHeap)
 			continue
 		}
 
 		if cellCover > bestCover {
 			bestCover = cellCover
+			bestCell = cell
 		}
+
+		heap.Fix(formulaCellHeap, cell.index)
 	}
 
-	return bestCover > 0 && len(*formulaCellHeap) > 0
+	return bestCover > 0 && len(*formulaCellHeap) > 0, bestCell
 }
 
 // Summarize summarizes
@@ -103,37 +111,43 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 
 	for len(summary) < size {
 		// add new formula with best cell
-		goodFormula := updateBestCellHeap(&rankedCells)
+		goodFormula, cell := updateBestCellHeap(&rankedCells)
 
 		if !goodFormula {
 			break
 		}
 
+		formula := NewFormula(*cell.cell)
+
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellHeap has pointers so we can safely modify the slice but not the cells it points to
 		formulaRankedCells := make(CellHeap, len(rankedCells))
-		copy(formulaRankedCells, rankedCells)
+		for i, cell := range rankedCells {
+			cellCopy := *cell
+			formulaRankedCells[i] = &cellCopy
+		}
 
-		cell := heap.Pop(&formulaRankedCells).(RankedCell)
-		formula := NewFormula(*cell.cell)
+		heap.Remove(&formulaRankedCells, cell.index)
 
 		// keep adding to formula
 		for true {
-			improved := updateFormulaBestCellHeap(&formulaRankedCells, formula)
+			improved, cell := updateFormulaBestCellHeap(&formulaRankedCells, formula)
 
 			if !improved {
 				break
 			}
 
+			// add cell to formula
+			formula.AddCell(*cell.cell)
+
+			// remove the cell from the heap beacuse we used it in this formula
+			heap.Remove(&formulaRankedCells, cell.index)
+
 			// have to reset the potentials because we will reduce the set of tuples that the formula covers
 			for i := range formulaRankedCells {
-				formulaRankedCells[i].potential = cell.maxPotential
+				formulaRankedCells[i].potential = formulaRankedCells[i].maxPotential
 			}
 			heap.Init(&formulaRankedCells)
-
-			// add cell to formula
-			cell := heap.Pop(&formulaRankedCells).(RankedCell)
-			formula.AddCell(*cell.cell)
 		}
 
 		// set cover in index

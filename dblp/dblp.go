@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/domoritz/summarization-go/summarize"
 	_ "github.com/mattn/go-sqlite3"
@@ -97,7 +98,11 @@ func main() {
 			i++
 		}
 
+		start := time.Now()
 		summary := relation.Summarize(16)
+		elapsed := time.Since(start)
+		log.Printf("Summary took %s\n", elapsed)
+
 		summary.DebugPrint()
 	}
 }

@@ -11,10 +11,11 @@ type RankedCell struct {
 
 	potential    int // potential is what the cell can cover in the whole relation or in the context of a formula, constraint: potential must always be higher than actual cover
 	maxPotential int // the maximum potential that the cell can have in the contenxt of a formula, can be used to reset potential
+	index        int // The index of the item in the heap.
 }
 
 // CellHeap is a heap of ranked cells
-type CellHeap []RankedCell
+type CellHeap []*RankedCell
 
 // Len is part of sort.Interface.
 func (cells CellHeap) Len() int { return len(cells) }
@@ -22,6 +23,8 @@ func (cells CellHeap) Len() int { return len(cells) }
 // Swap is part of sort.Interface.
 func (cells CellHeap) Swap(i, j int) {
 	cells[i], cells[j] = cells[j], cells[i]
+	cells[i].index = i
+	cells[j].index = j
 }
 
 // Less is part of sort.Interface. Sort by Potential.
@@ -39,21 +42,60 @@ func (cells CellHeap) Less(i, j int) bool {
 
 // Push pushes
 func (cells *CellHeap) Push(x interface{}) {
-	*cells = append(*cells, x.(RankedCell))
+	n := len(*cells)
+	cell := x.(*RankedCell)
+	cell.index = n
+	*cells = append(*cells, cell)
 }
 
 // Pop pops
 func (cells *CellHeap) Pop() interface{} {
 	old := *cells
 	n := len(old)
-	item := old[n-1]
+	cell := old[n-1]
+	cell.index = -1 // for safety
 	*cells = old[0 : n-1]
-	return item
+	return cell
 }
 
 // Peek returns a pointer to the best cell
 func (cells CellHeap) Peek() *RankedCell {
-	return &cells[0]
+	return cells[0]
+}
+
+// Valid checks whether the heap is a heap
+func (cells CellHeap) Valid(i int) bool {
+	n := cells.Len()
+	j1 := 2*i + 1
+	j2 := 2*i + 2
+	if j1 < n {
+		if cells.Less(j1, i) {
+			fmt.Printf("heap invariant invalidated [%d] = %d > [%d] = %d", i, cells[i], j1, cells[j1])
+			return false
+		}
+		if !cells.Valid(j1) {
+			return false
+		}
+	}
+	if j2 < n {
+		if cells.Less(j2, i) {
+			fmt.Printf("heap invariant invalidated [%d] = %d > [%d] = %d", i, cells[i], j1, cells[j2])
+			return false
+		}
+		if !cells.Valid(j2) {
+			return false
+		}
+	}
+
+	// for i := 0; i < len(cells); i++ {
+	// 	for j := 2*i + 1; j <= 2*i+2 && j < len(cells); j++ {
+	// 		if cells.Less(j, i) {
+	// 			return false
+	// 		}
+	// 	}
+	// }
+
+	return true
 }
 
 // recomputes how much the tuple covers

@@ -16,16 +16,28 @@ func TestHeap(t *testing.T) {
 	three := Cell{nil, &attr, "three"}
 	five := Cell{nil, &attr, "five"}
 
-	cells := CellHeap{RankedCell{&zero, 0, -1}, RankedCell{&one, 1, -1}, RankedCell{&three, 3, -1},
-		RankedCell{&three, 3, -1}, RankedCell{&five, 5, -1}, RankedCell{&two, 2, -1}}
+	cells := CellHeap{&RankedCell{&zero, 0, -1, 0}, &RankedCell{&one, 1, -1, 1}, &RankedCell{&three, 3, -1, 2},
+		&RankedCell{&three, 3, -1, 3}, &RankedCell{&five, 5, -1, 4}, &RankedCell{&two, 2, -1, 5}}
 
 	heap.Init(&cells)
 
-	previous := heap.Pop(&cells).(RankedCell)
+	if !cells.Valid(0) {
+		t.Error("Invalid heap")
+	}
+
+	previous := heap.Pop(&cells).(*RankedCell)
+
+	if !cells.Valid(0) {
+		t.Error("Invalid heap")
+	}
 
 	for len(cells) > 0 {
 		currPeek := *cells.Peek()
-		current := heap.Pop(&cells).(RankedCell)
+		current := heap.Pop(&cells).(*RankedCell)
+
+		if !cells.Valid(0) {
+			t.Error("Invalid heap")
+		}
 
 		if currPeek.potential != current.potential {
 			t.Error("Peek was not pop")
@@ -42,7 +54,7 @@ func TestRecomputeCoverage(t *testing.T) {
 	cover[17] = true
 	cover[42] = false
 	cell := Cell{cover, nil, "x"}
-	rankedCell := RankedCell{&cell, 10, -1}
+	rankedCell := RankedCell{&cell, 10, -1, 0}
 
 	result := rankedCell.recomputeCoverage()
 
@@ -63,7 +75,7 @@ func TestRecomputeCoverageFormula(t *testing.T) {
 	cover[99] = false
 	cover[123] = false
 	cell := Cell{cover, nil, "x"}
-	rankedCell := RankedCell{&cell, 10, -1}
+	rankedCell := RankedCell{&cell, 10, -1, 0}
 
 	covers := make(TupleCovers)
 	covers[17] = 2
