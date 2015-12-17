@@ -3,6 +3,8 @@ package summarize
 import (
 	"container/heap"
 	"testing"
+
+	"golang.org/x/tools/container/intsets"
 )
 
 func TestHeap(t *testing.T) {
@@ -31,5 +33,59 @@ func TestHeap(t *testing.T) {
 		if previous.potential < current.potential {
 			t.Error("Previous should have higher priority")
 		}
+	}
+}
+
+func TestRecomputeCoverage(t *testing.T) {
+	cover := make(TupleCover)
+	cover[12] = false
+	cover[17] = true
+	cover[42] = false
+	cell := Cell{cover, nil, "x"}
+	rankedCell := RankedCell{&cell, 10, -1}
+
+	result := rankedCell.recomputeCoverage()
+
+	if result != 2 {
+		t.Error("Wrong cover")
+	}
+
+	if result != rankedCell.potential {
+		t.Error("Should be equal")
+	}
+}
+
+func TestRecomputeCoverageFormula(t *testing.T) {
+	cover := make(TupleCover)
+	cover[12] = false
+	cover[17] = true
+	cover[42] = false
+	cover[99] = false
+	cover[123] = false
+	cell := Cell{cover, nil, "x"}
+	rankedCell := RankedCell{&cell, 10, -1}
+
+	covers := make(TupleCovers)
+	covers[17] = 2
+	covers[42] = 1
+	covers[123] = 3
+	covers[255] = 2
+	var set intsets.Sparse
+	formula := Formula{nil, set, covers, 5}
+
+	formulaPotential := rankedCell.recomputeFormulaCoverage(&formula)
+
+	// (2 + 1 + 3) + (2) - 5 = 3
+	if formulaPotential != 3 {
+		t.Error("Wrong cover", formulaPotential)
+	}
+
+	if formulaPotential != rankedCell.potential {
+		t.Error("Should be equal")
+	}
+
+	// 2
+	if rankedCell.maxPotential != 2 {
+		t.Error("Wrong cover")
 	}
 }
