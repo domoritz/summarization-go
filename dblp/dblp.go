@@ -101,7 +101,7 @@ func main() {
 		start := time.Now()
 		summary := relation.Summarize(16)
 		elapsed := time.Since(start)
-		log.Printf("Summary took %s\n", elapsed)
+		log.Printf("Summarization took %s\n", elapsed)
 
 		summary.DebugPrint()
 	}
