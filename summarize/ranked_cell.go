@@ -87,14 +87,6 @@ func (cells CellHeap) Valid(i int) bool {
 		}
 	}
 
-	// for i := 0; i < len(cells); i++ {
-	// 	for j := 2*i + 1; j <= 2*i+2 && j < len(cells); j++ {
-	// 		if cells.Less(j, i) {
-	// 			return false
-	// 		}
-	// 	}
-	// }
-
 	return true
 }
 
