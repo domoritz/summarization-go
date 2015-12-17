@@ -45,6 +45,17 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 	return rankedCells
 }
 
+// makes copies of pointer
+func copyRankedCells(rankedCells CellHeap) CellHeap {
+	cellsCopy := make(CellHeap, len(rankedCells))
+	for i, cell := range rankedCells {
+		cellCopy := new(RankedCell)
+		*cellCopy = *cell
+		cellsCopy[i] = cellCopy
+	}
+	return cellsCopy
+}
+
 // returns the best cell form a list of cells with potentials
 // requires that the cells are a sorted heap
 func updateBestCellHeap(cellHeap *CellHeap) (bool, *RankedCell) {
@@ -121,11 +132,7 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellHeap has pointers so we can safely modify the slice but not the cells it points to
-		formulaRankedCells := make(CellHeap, len(rankedCells))
-		for i, cell := range rankedCells {
-			cellCopy := *cell
-			formulaRankedCells[i] = &cellCopy
-		}
+		formulaRankedCells := copyRankedCells(rankedCells)
 
 		heap.Remove(&formulaRankedCells, cell.index)
 
