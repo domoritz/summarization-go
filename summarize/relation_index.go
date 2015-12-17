@@ -115,7 +115,11 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 				prefix := ""
 				hValues := strings.Split(value, " ")
 				for _, hValue := range hValues {
-					prefix += hValue
+					p := ""
+					if len(prefix) > 0 {
+						p = "/"
+					}
+					prefix += p + hValue
 					index[i].AddCell(prefix, tuple)
 				}
 			}

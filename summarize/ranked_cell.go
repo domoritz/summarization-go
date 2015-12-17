@@ -26,8 +26,15 @@ func (cells CellHeap) Swap(i, j int) {
 
 // Less is part of sort.Interface. Sort by Potential.
 func (cells CellHeap) Less(i, j int) bool {
-	// todo: prefer shorter prefixes to break ties
-	return cells[i].potential > cells[j].potential
+	p1 := cells[i]
+	p2 := cells[j]
+	if p1.potential == p2.potential {
+		if p1.cell.attribute.index == p2.cell.attribute.index && p1.cell.attribute.attributeType == hierarchy && p2.cell.attribute.attributeType == hierarchy {
+			// prefer shorter hierarchies
+			return len(cells[i].cell.value) < len(cells[i].cell.value)
+		}
+	}
+	return p1.potential > p2.potential
 }
 
 // Push pushes

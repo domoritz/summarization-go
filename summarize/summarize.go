@@ -48,7 +48,7 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 func updateBestCellHeap(cellHeap *CellHeap) bool {
 	bestCover := 0
 
-	for cellHeap.Peek().potential > bestCover {
+	for len(*cellHeap) > 0 && cellHeap.Peek().potential > bestCover {
 		cell := cellHeap.Peek()
 		cover := cell.recomputeCoverage()
 		heap.Fix(cellHeap, 0)
@@ -58,7 +58,7 @@ func updateBestCellHeap(cellHeap *CellHeap) bool {
 		}
 	}
 
-	return bestCover > 0
+	return bestCover > 0 && len(*cellHeap) > 0
 }
 
 // returns nil if no cell could be found that improves the formula
@@ -76,6 +76,7 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 		}
 
 		cellCover := cell.recomputeFormulaCoverage(formula)
+		heap.Fix(formulaCellHeap, 0)
 
 		if cell.maxPotential <= 0 {
 			// looks like there is no overlap between what tuples the formula and the cell cover
@@ -88,11 +89,7 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) bool
 		}
 	}
 
-	if bestCover <= 0 || len(*formulaCellHeap) == 0 {
-		return false
-	}
-
-	return true
+	return bestCover > 0 && len(*formulaCellHeap) > 0
 }
 
 // Summarize summarizes
@@ -126,13 +123,13 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 
 			if !improved {
 				break
-			} else {
-				// have to reset the potentials because we will reduce the set of tuples that the formula covers
-				for i := range formulaRankedCells {
-					formulaRankedCells[i].potential = cell.maxPotential
-				}
-				heap.Init(&formulaRankedCells)
 			}
+
+			// have to reset the potentials because we will reduce the set of tuples that the formula covers
+			for i := range formulaRankedCells {
+				formulaRankedCells[i].potential = cell.maxPotential
+			}
+			heap.Init(&formulaRankedCells)
 
 			// add cell to formula
 			cell := heap.Pop(&formulaRankedCells).(RankedCell)
@@ -204,11 +201,22 @@ func (summary SummaryResult) DebugPrint() {
 		values[len(values)-2] = fmt.Sprintf("%d", summary.FormulaCover[i])
 		for _, cell := range cells {
 			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
-			prefix := ""
-			if len(values[header[key]]) > 0 {
-				prefix = ", "
+
+			switch cell.attributeType {
+			case set:
+				prefix := ""
+				if len(values[header[key]]) > 0 {
+					prefix = ", "
+				}
+				values[header[key]] += prefix + cell.value
+			case hierarchy:
+				if len(values[header[key]]) < len(cell.value) {
+					values[header[key]] = cell.value
+				}
+			case single:
+				values[header[key]] = cell.value
 			}
-			values[header[key]] += prefix + cell.value
+
 		}
 		values[len(values)-1] = fmt.Sprintf("%d", len(cells))
 		table.Append(values)
