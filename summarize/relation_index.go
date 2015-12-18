@@ -129,6 +129,19 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 	return relation, nil
 }
 
+// Reset resets coverage
+func (relation *RelationIndex) Reset() {
+	for ia := range relation.attrs {
+		attr := &relation.attrs[ia]
+		for ic := range attr.cells {
+			cell := &attr.cells[ic]
+			for tc := range cell.cover {
+				cell.cover[tc] = false
+			}
+		}
+	}
+}
+
 func (relation RelationIndex) String() string {
 	var buffer bytes.Buffer
 	fmt.Fprintf(&buffer, "Relation Index (%d attributes, %d tuples):\n", len(relation.attrs), relation.numTuples)

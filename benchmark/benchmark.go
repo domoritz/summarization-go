@@ -10,7 +10,12 @@ import (
 )
 
 func main() {
-	fmt.Println("numTuples, size, elapsed nanoseconds")
+	fmt.Println("numTuples, size, actual size, trial, elapsed nanoseconds")
+
+	// test various sizes
+	sizes := []int{1, 10, 50, 100, 200, 300}
+
+	// test different # of tuples
 	for numTuples := 10000; numTuples < 1000000; numTuples += 20000 {
 
 		types := []string{"single", "single", "single", "set", "set"}
@@ -36,12 +41,16 @@ func main() {
 			}
 		}
 
-		sizes := []int{1, 10, 50, 100, 200, 300, 500}
-		for size := range sizes {
-			start := time.Now()
-			relation.Summarize(size)
-			elapsed := time.Since(start)
-			fmt.Printf("%d, %d, %v\n", numTuples, size, elapsed.Nanoseconds())
+		for _, size := range sizes {
+
+			// run each experiment multiple times
+			for trial := 0; trial < 6; trial++ {
+				start := time.Now()
+				summary := relation.Summarize(size)
+				elapsed := time.Since(start)
+				relation.Reset()
+				fmt.Printf("%d, %d, %d, %d, %v\n", numTuples, size, len(summary.Summary), trial, elapsed.Nanoseconds())
+			}
 		}
 	}
 }
