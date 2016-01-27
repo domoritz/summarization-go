@@ -141,7 +141,7 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) int {
 		}
 	}
 
-	// the potential to cover things in the contenxt of a formula (so we subtract what cannot be covered if we add this cell)
+	// the potential to cover things in the context of a formula (so we subtract what cannot be covered if we add this cell)
 	// this is what actually matters when we try to find a new cell but it also is only valid with respect to the current tupleCover
 	cell.potential = formulaCover - formula.cover
 
