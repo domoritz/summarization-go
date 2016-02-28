@@ -8,9 +8,9 @@ import (
 // TupleCover is a map from tuple index to whether the tuple covers it
 type TupleCover map[int]bool
 
-// Cell is a cell
+// Cell is an attribute value that covers tuples
 type Cell struct {
-	cover     TupleCover // what the attribute covers
+	cover     TupleCover // what cells the attribute covers
 	attribute *Attribute // attribute
 	value     string     // attribute value
 }

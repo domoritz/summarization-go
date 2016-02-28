@@ -147,7 +147,7 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 			// add cell to formula
 			formula.AddCell(*cell.cell)
 
-			// remove the cell from the heap beacuse we used it in this formula
+			// remove the cell from the heap because we used it in this formula
 			heap.Remove(&formulaRankedCells, cell.index)
 
 			// have to reset the potentials because we will reduce the set of tuples that the formula covers
@@ -163,7 +163,7 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 		formulaCover = append(formulaCover, formula.cover)
 		summaryCover += formula.cover
 
-		// if the formula has only one cell, we can pop that one off the heap beacuse nothing can every use it again
+		// if the formula has only one cell, we can pop that one off the heap because nothing can every use it again
 		if len(formula.cells) == 1 {
 			if rankedCells.Peek().cell.value != formula.cells[0].value {
 				panic("assert")
