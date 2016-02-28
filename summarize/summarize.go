@@ -128,18 +128,22 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 			break
 		}
 
+		// create formula from best cell
 		formula := NewFormula(*cell.cell)
 
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellHeap has pointers so we can safely modify the slice but not the cells it points to
 		formulaRankedCells := copyRankedCells(rankedCells)
 
+		// remove the cell we used to build a formula because we won't use it any more
+		// remove only from the heap for this formula but not in general
 		heap.Remove(&formulaRankedCells, cell.index)
 
 		// keep adding to formula
 		for true {
 			improved, cell := updateFormulaBestCellHeap(&formulaRankedCells, formula)
 
+			// there may not be an improvement if adding the formula reduces its applicability
 			if !improved {
 				break
 			}
@@ -164,6 +168,7 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 		summaryCover += formula.cover
 
 		// if the formula has only one cell, we can pop that one off the heap because nothing can every use it again
+		// we cannot remove it in other cases because the same cell may be used again
 		if len(formula.cells) == 1 {
 			if rankedCells.Peek().cell.value != formula.cells[0].value {
 				panic("assert")
@@ -171,6 +176,7 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 			heap.Pop(&rankedCells)
 		}
 
+		// add formula to summary
 		var values []Value
 		for _, cell := range formula.cells {
 			value := Value{cell.attribute.attributeType, cell.attribute.attributeName, cell.value}
