@@ -112,6 +112,7 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) int {
 	formulaCover := 0     // what we cover in the whole formula
 	cell.maxPotential = 0 // what the cell can cover at most
 
+	// compute cover in intersection, loops over smaller list
 	// doing this optimizations saves about 25% time
 	if len(formula.tupleCover) <= len(cell.cell.cover) {
 		for tuple, cover := range formula.tupleCover {
@@ -146,7 +147,7 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) int {
 	cell.potential = formulaCover - formula.cover
 
 	if before < cell.potential {
-		panic("not smaller")
+		panic("Coverage can only decrease")
 	}
 
 	return cell.potential

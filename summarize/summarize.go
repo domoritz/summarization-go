@@ -36,7 +36,7 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 		for i := range attr.cells {
 			cell := &attr.cells[i]
 			potential := len(cell.cover)
-			// todo; we may be able to ignore if we add regularization
+			// TODO: we may be able to ignore cells if we add regularization
 			rankedCell := RankedCell{cell, potential, potential, index}
 			rankedCells = append(rankedCells, &rankedCell)
 			index++
@@ -45,7 +45,7 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 	return rankedCells
 }
 
-// makes copies of pointer
+// makes copies of pointers
 func copyRankedCells(rankedCells CellHeap) CellHeap {
 	cellsCopy := make(CellHeap, len(rankedCells))
 	for i, cell := range rankedCells {
@@ -171,7 +171,7 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 		// we cannot remove it in other cases because the same cell may be used again
 		if len(formula.cells) == 1 {
 			if rankedCells.Peek().cell.value != formula.cells[0].value {
-				panic("assert")
+				panic("The value of first cell should be the same as the value of the cell in the formula if the formula has only one cell.")
 			}
 			heap.Pop(&rankedCells)
 		}
