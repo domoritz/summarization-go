@@ -28,18 +28,20 @@ func (relation RelationIndex) Attrs() *[]Attribute {
 }
 
 // AddCell adds a cell to an attribute
-func (attr *Attribute) AddCell(value string, tuple int) bool {
+func (attr *Attribute) AddCell(value string, tuple int, assessor Assessor) bool {
 	added := false
+
+	cover := Cover{false, assessor.Weight(attr, tuple)}
 
 	idx, has := attr.valueIndex[value]
 	if !has {
-		c := MakeCell(attr, value)
-		c.cover[tuple] = false
+		c := MakeCell(attr, value, assessor.function == Equal)
+		c.covers[tuple] = &cover
 		attr.valueIndex[value] = len(attr.cells)
 		attr.cells = append(attr.cells, c)
 		added = true
 	} else {
-		attr.cells[idx].cover[tuple] = false
+		attr.cells[idx].covers[tuple] = &cover
 	}
 	return added
 }
@@ -74,7 +76,7 @@ func NewIndex(typeNames []string, names []string, numTuples int) (*RelationIndex
 }
 
 // NewIndexFromString creates a relation index from a string
-func NewIndexFromString(description string) (*RelationIndex, error) {
+func NewIndexFromString(description string, assessor Assessor) (*RelationIndex, error) {
 	lines := strings.Split(description, "\n")
 
 	typeNames := strings.Split(lines[0], ",")
@@ -84,6 +86,8 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	assessor.NumTuples = relation.numTuples
 
 	index := relation.attrs
 	numAttr := len(index)
@@ -105,11 +109,11 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 
 			switch index[i].attributeType {
 			case single:
-				index[i].AddCell(value, tuple)
+				index[i].AddCell(value, tuple, assessor)
 			case set:
 				setValues := strings.Split(value, " ")
 				for _, setValue := range setValues {
-					index[i].AddCell(setValue, tuple)
+					index[i].AddCell(setValue, tuple, assessor)
 				}
 			case hierarchy:
 				prefix := ""
@@ -120,7 +124,7 @@ func NewIndexFromString(description string) (*RelationIndex, error) {
 						p = "/"
 					}
 					prefix += p + hValue
-					index[i].AddCell(prefix, tuple)
+					index[i].AddCell(prefix, tuple, assessor)
 				}
 			}
 		}
@@ -135,8 +139,8 @@ func (relation *RelationIndex) Reset() {
 		attr := &relation.attrs[ia]
 		for ic := range attr.cells {
 			cell := &attr.cells[ic]
-			for tc := range cell.cover {
-				cell.cover[tc] = false
+			for tc := range cell.covers {
+				cell.covers[tc].covered = false
 			}
 		}
 	}
@@ -150,8 +154,8 @@ func (relation RelationIndex) String() string {
 		for _, cell := range attribute.cells {
 			fmt.Fprintf(&buffer, " Value '%s' covers: [", cell.value)
 			var tuples []string
-			for tuple, covered := range cell.cover {
-				tuples = append(tuples, fmt.Sprintf("%d:%s", tuple, bString(covered)))
+			for tuple, covered := range cell.covers {
+				tuples = append(tuples, fmt.Sprintf("%d:(%s %.3g)", tuple, bString(covered.covered), covered.weight))
 			}
 
 			buffer.WriteString(strings.Join(tuples, " "))

@@ -3,8 +3,10 @@ package summarize
 import "testing"
 
 func TestCreate(t *testing.T) {
+	y := Cover{true, 1}
+	n := Cover{false, 1}
 	attribute := Attribute{0, set, "x", nil, nil}
-	cell := Cell{TupleCover{0: true, 1: false}, &attribute, "a"}
+	cell := Cell{TupleCover{0: &y, 1: &n}, &attribute, "a", true}
 
 	formula := NewFormula(cell)
 
@@ -16,7 +18,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	attribute2 := Attribute{0, set, "x", nil, nil}
-	cell2 := Cell{TupleCover{1: false, 2: true}, &attribute2, "a"}
+	cell2 := Cell{TupleCover{1: &n, 2: &y}, &attribute2, "a", true}
 	formula.AddCell(cell2)
 
 	if _, has := formula.tupleCover[0]; has {

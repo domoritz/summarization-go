@@ -8,14 +8,14 @@ import (
 )
 
 // TupleCovers gives us the value for each tuple
-type TupleCovers map[int]int
+type TupleCovers map[int]float64
 
 // Formula is a map from attribute id to lists of cells
 type Formula struct {
 	cells                []Cell         // list of cells
 	usedSingleAttributes intsets.Sparse // which single attributes are already used
 	tupleCover           TupleCovers    // how much does a tuple contribute to the formula
-	cover                int            // how much does this formula cover, sum of valid tupleCover
+	cover                float64        // how much does this formula cover, sum of valid tupleCover
 }
 
 // NewFormula creates a new formula from a cell
@@ -25,10 +25,10 @@ func NewFormula(cell Cell) *Formula {
 	formula.tupleCover = make(TupleCovers)
 	formula.cover = 0
 
-	for tuple, covered := range cell.cover {
-		if !covered {
-			formula.tupleCover[tuple] = 1
-			formula.cover++
+	for tuple, cover := range cell.covers {
+		if !cover.covered {
+			formula.tupleCover[tuple] = cover.weight
+			formula.cover += cover.weight
 		} else {
 			formula.tupleCover[tuple] = 0
 		}
@@ -54,12 +54,12 @@ func (formula *Formula) AddCell(cell Cell) {
 
 	// TODO: is other direction faster?
 	for tuple := range formula.tupleCover {
-		if _, has := cell.cover[tuple]; !has {
+		if cover, has := cell.covers[tuple]; has {
+			formula.cover += cover.weight
+			formula.tupleCover[tuple] += cover.weight
+		} else {
 			formula.cover -= formula.tupleCover[tuple]
 			delete(formula.tupleCover, tuple)
-		} else {
-			formula.cover++
-			formula.tupleCover[tuple]++
 		}
 	}
 }
@@ -69,9 +69,9 @@ func (formula *Formula) CoverIndex(relation *RelationIndex) {
 	// TODO: is other direction faster?
 	for _, cell := range formula.cells {
 		for tuple := range formula.tupleCover {
-			if covered, has := cell.cover[tuple]; has && !covered {
+			if cover, has := cell.covers[tuple]; has && !cover.covered {
 				// set uncovered to covered
-				cell.cover[tuple] = true
+				cell.covers[tuple].covered = true
 			}
 		}
 	}
