@@ -41,6 +41,10 @@ func main() {
 
 		types := []string{"set", "single", "single", "single", "single", "single", "single"}
 		names := []string{"author", "school", "journal", "publisher", "year", "organization", "institution"}
+		weights := []float64{1, 0.7, 0.6, 0.3, 0.1, 0.7, 0.7}
+
+		assessor := summarize.MakeExponentialAssessor(weights)
+		assessor.NumTuples = numTuples
 
 		relation, err := summarize.NewIndex(types, names, numTuples)
 		if err != nil {
@@ -68,31 +72,31 @@ func main() {
 			for _, author := range strings.Split(authors, ",") {
 				author = strings.TrimSpace(author)
 				if len(author) > 0 {
-					(*attrs)[0].AddCell(author, i)
+					(*attrs)[0].AddCell(author, i, assessor)
 				}
 			}
 
 			if len(school) > 0 {
-				(*attrs)[1].AddCell(school, i)
+				(*attrs)[1].AddCell(school, i, assessor)
 			}
 			if len(journal) > 0 {
-				(*attrs)[2].AddCell(journal, i)
+				(*attrs)[2].AddCell(journal, i, assessor)
 			}
 
 			if len(publisher) > 0 {
-				(*attrs)[3].AddCell(publisher, i)
+				(*attrs)[3].AddCell(publisher, i, assessor)
 			}
 
 			if len(year) > 0 {
-				(*attrs)[4].AddCell(year, i)
+				(*attrs)[4].AddCell(year, i, assessor)
 			}
 
 			if len(organization) > 0 {
-				(*attrs)[5].AddCell(organization, i)
+				(*attrs)[5].AddCell(organization, i, assessor)
 			}
 
 			if len(institution) > 0 {
-				(*attrs)[6].AddCell(institution, i)
+				(*attrs)[6].AddCell(institution, i, assessor)
 			}
 
 			i++

@@ -9,9 +9,9 @@ import (
 type RankedCell struct {
 	cell *Cell // pointer to cell
 
-	potential    int // potential is what the cell can cover in the whole relation or in the context of a formula, constraint: potential must always be higher than actual cover
-	maxPotential int // the maximum potential that the cell can have in the context of a formula, can be used to reset potential
-	index        int // The index of the item in the heap.
+	potential    float64 // potential is what the cell can cover in the whole relation or in the context of a formula, constraint: potential must always be higher than actual cover
+	maxPotential float64 // the maximum potential that the cell can have in the context of a formula, can be used to reset potential
+	index        int     // The index of the item in the heap.
 }
 
 // CellHeap is a heap of ranked cells
@@ -70,8 +70,7 @@ func (cells CellHeap) Valid(i int) bool {
 	j2 := 2*i + 2
 	if j1 < n {
 		if cells.Less(j1, i) {
-			fmt.Printf("heap invariant invalidated [%d] = %d > [%d] = %d", i, cells[i], j1, cells[j1])
-			return false
+			panic(fmt.Sprintf("heap invariant invalidated [%d] = %d > [%d] = %d", i, cells[i], j1, cells[j1]))
 		}
 		if !cells.Valid(j1) {
 			return false
@@ -79,8 +78,7 @@ func (cells CellHeap) Valid(i int) bool {
 	}
 	if j2 < n {
 		if cells.Less(j2, i) {
-			fmt.Printf("heap invariant invalidated [%d] = %d > [%d] = %d", i, cells[i], j1, cells[j2])
-			return false
+			panic(fmt.Sprintf("heap invariant invalidated [%d] = %d > [%d] = %d", i, cells[i], j1, cells[j2]))
 		}
 		if !cells.Valid(j2) {
 			return false
@@ -92,12 +90,12 @@ func (cells CellHeap) Valid(i int) bool {
 
 // recomputes how much the tuple covers
 // returns the potential
-func (cell *RankedCell) recomputeCoverage() int {
+func (cell *RankedCell) recomputeCoverage() float64 {
 	cell.potential = 0
 
-	for _, covered := range cell.cell.cover {
-		if !covered {
-			cell.potential++
+	for _, cover := range cell.cell.covers {
+		if !cover.covered {
+			cell.potential += cover.weight
 		}
 	}
 
@@ -106,36 +104,37 @@ func (cell *RankedCell) recomputeCoverage() int {
 
 // recomputes what this cell covers in the context of the formula
 // returns the new formula cover and the cell cover
-func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) int {
+func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) float64 {
 	before := cell.potential
 
-	formulaCover := 0     // what we cover in the whole formula
-	cell.maxPotential = 0 // what the cell can cover at most
+	formulaCover := 0.0     // what we cover in the whole formula
+	cell.maxPotential = 0.0 // what the cell can cover at most
 
+	// compute cover in intersection, loops over smaller list
 	// doing this optimizations saves about 25% time
-	if len(formula.tupleCover) <= len(cell.cell.cover) {
-		for tuple, cover := range formula.tupleCover {
-			covered, has := cell.cell.cover[tuple]
+	if len(formula.tupleCover) <= len(cell.cell.covers) {
+		for tuple, tupleCover := range formula.tupleCover {
+			cover, has := cell.cell.covers[tuple]
 			if has {
-				formulaCover += cover
+				formulaCover += tupleCover
 				// no conflict
-				if !covered {
+				if !cover.covered {
 					// and cell is not yet covered, great
-					cell.maxPotential++
-					formulaCover++
+					cell.maxPotential += cover.weight
+					formulaCover += cover.weight
 				}
 			}
 		}
 	} else {
-		for tuple, covered := range cell.cell.cover {
-			cover, has := formula.tupleCover[tuple]
+		for tuple, cover := range cell.cell.covers {
+			tupleCover, has := formula.tupleCover[tuple]
 			if has {
-				formulaCover += cover
+				formulaCover += tupleCover
 				// no conflict
-				if !covered {
+				if !cover.covered {
 					// and cell is not yet covered, great
-					cell.maxPotential++
-					formulaCover++
+					cell.maxPotential += cover.weight
+					formulaCover += cover.weight
 				}
 			}
 		}
@@ -145,8 +144,8 @@ func (cell *RankedCell) recomputeFormulaCoverage(formula *Formula) int {
 	// this is what actually matters when we try to find a new cell but it also is only valid with respect to the current tupleCover
 	cell.potential = formulaCover - formula.cover
 
-	if before < cell.potential {
-		panic("not smaller")
+	if cell.potential-before > 0.00001 {
+		panic(fmt.Sprintf("Coverage can only decrease. Before %v, after:", before, cell.potential))
 	}
 
 	return cell.potential
@@ -163,6 +162,6 @@ func (cells CellHeap) String() string {
 
 func (cell RankedCell) String() string {
 	var buffer bytes.Buffer
-	fmt.Fprintf(&buffer, "%s (potential: %d, max: %d)", cell.cell, cell.potential, cell.maxPotential)
+	fmt.Fprintf(&buffer, "%s (potential: %.3g, max: %.3g)", cell.cell, cell.potential, cell.maxPotential)
 	return buffer.String()
 }

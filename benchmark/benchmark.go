@@ -20,6 +20,7 @@ func main() {
 
 		types := []string{"single", "single", "single", "set", "set"}
 		names := []string{"s0", "s1", "s2", "set0", "set1"}
+		assessor := summarize.MakeEqualWeightAssessor()
 
 		relation, err := summarize.NewIndex(types, names, numTuples)
 		if err != nil {
@@ -29,15 +30,15 @@ func main() {
 		attrs := relation.Attrs()
 
 		for i := 0; i < numTuples; i++ {
-			(*attrs)[0].AddCell(randomdata.FirstName(randomdata.Female), i)
-			(*attrs)[1].AddCell(randomdata.LastName(), i)
-			(*attrs)[2].AddCell(randomdata.FullName(randomdata.RandomGender), i)
+			(*attrs)[0].AddCell(randomdata.FirstName(randomdata.Female), i, assessor)
+			(*attrs)[1].AddCell(randomdata.LastName(), i, assessor)
+			(*attrs)[2].AddCell(randomdata.FullName(randomdata.RandomGender), i, assessor)
 
 			for j := 0; j < 3; j++ {
-				(*attrs)[3].AddCell(randomdata.City(), i)
+				(*attrs)[3].AddCell(randomdata.City(), i, assessor)
 			}
 			for j := 0; j < 6; j++ {
-				(*attrs)[4].AddCell(randomdata.State(randomdata.Large), i)
+				(*attrs)[4].AddCell(randomdata.State(randomdata.Large), i, assessor)
 			}
 		}
 

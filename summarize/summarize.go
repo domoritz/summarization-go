@@ -3,6 +3,7 @@ package summarize
 import (
 	"container/heap"
 	"fmt"
+	"log"
 	"os"
 	"sort"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // var info = log.New(os.Stdout, "INFO: ", log.Lshortfile)
-// var dbg = log.New(os.Stdout, "DEBUG: ", log.Lshortfile)
+var dbg = log.New(os.Stdout, "DEBUG: ", log.Lshortfile)
 
 // Value is an assignment for the summary
 type Value struct {
@@ -24,9 +25,9 @@ type Summary [][]Value
 
 // SummaryResult packs a summary
 type SummaryResult struct {
-	Summary      Summary // the summary
-	FormulaCover []int   // how much each formula covers
-	SummaryCover int     // sum of tupleCover
+	Summary      Summary   // the summary
+	FormulaCover []float64 // how much each formula covers
+	SummaryCover float64   // sum of tupleCover
 }
 
 func makeRankedCells(relation RelationIndex) CellHeap {
@@ -35,8 +36,8 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 	for _, attr := range relation.attrs {
 		for i := range attr.cells {
 			cell := &attr.cells[i]
-			potential := len(cell.cover)
-			// todo; we may be able to ignore if we add regularization
+			potential := cell.SumWeights()
+			// TODO: we may be able to ignore cells if we add regularization
 			rankedCell := RankedCell{cell, potential, potential, index}
 			rankedCells = append(rankedCells, &rankedCell)
 			index++
@@ -45,7 +46,7 @@ func makeRankedCells(relation RelationIndex) CellHeap {
 	return rankedCells
 }
 
-// makes copies of pointer
+// makes copies of pointers
 func copyRankedCells(rankedCells CellHeap) CellHeap {
 	cellsCopy := make(CellHeap, len(rankedCells))
 	for i, cell := range rankedCells {
@@ -59,10 +60,10 @@ func copyRankedCells(rankedCells CellHeap) CellHeap {
 // returns the best cell form a list of cells with potentials
 // requires that the cells are a sorted heap
 func updateBestCellHeap(cellHeap *CellHeap) (bool, *RankedCell) {
-	bestCover := 0
+	bestCover := 0.0
 	var bestCell *RankedCell
 
-	for len(*cellHeap) > 0 && cellHeap.Peek().potential > bestCover {
+	for len(*cellHeap) > 0.0 && cellHeap.Peek().potential > bestCover {
 		cell := cellHeap.Peek()
 		cover := cell.recomputeCoverage()
 		heap.Fix(cellHeap, cell.index)
@@ -73,14 +74,14 @@ func updateBestCellHeap(cellHeap *CellHeap) (bool, *RankedCell) {
 		}
 	}
 
-	return bestCover > 0 && len(*cellHeap) > 0, bestCell
+	return bestCover > 0.0 && len(*cellHeap) > 0, bestCell
 }
 
 // returns nil if no cell could be found that improves the formula
 // requires cells to be a heap
 func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) (bool, *RankedCell) {
 	// the largest change that a cell can do
-	bestCover := 0
+	bestCover := 0.0
 	var bestCell *RankedCell
 
 	for len(*formulaCellHeap) > 0 && formulaCellHeap.Peek().potential > bestCover {
@@ -113,8 +114,8 @@ func updateFormulaBestCellHeap(formulaCellHeap *CellHeap, formula *Formula) (boo
 
 // Summarize summarizes
 func (relation RelationIndex) Summarize(size int) SummaryResult {
-	var formulaCover []int
-	summaryCover := 0
+	var formulaCover []float64
+	summaryCover := 0.0
 	var summary Summary
 
 	rankedCells := makeRankedCells(relation)
@@ -128,18 +129,22 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 			break
 		}
 
+		// create formula from best cell
 		formula := NewFormula(*cell.cell)
 
 		// make a copy of the ranked cells, we can use this now in the context of a formula and remove elements and reorder
 		// note that CellHeap has pointers so we can safely modify the slice but not the cells it points to
 		formulaRankedCells := copyRankedCells(rankedCells)
 
+		// remove the cell we used to build a formula because we won't use it any more
+		// remove only from the heap for this formula but not in general
 		heap.Remove(&formulaRankedCells, cell.index)
 
 		// keep adding to formula
 		for true {
 			improved, cell := updateFormulaBestCellHeap(&formulaRankedCells, formula)
 
+			// there may not be an improvement if adding the formula reduces its applicability
 			if !improved {
 				break
 			}
@@ -164,13 +169,15 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 		summaryCover += formula.cover
 
 		// if the formula has only one cell, we can pop that one off the heap because nothing can every use it again
+		// we cannot remove it in other cases because the same cell may be used again
 		if len(formula.cells) == 1 {
 			if rankedCells.Peek().cell.value != formula.cells[0].value {
-				panic("assert")
+				panic("The value of first cell should be the same as the value of the cell in the formula if the formula has only one cell.")
 			}
 			heap.Pop(&rankedCells)
 		}
 
+		// add formula to summary
 		var values []Value
 		for _, cell := range formula.cells {
 			value := Value{cell.attribute.attributeType, cell.attribute.attributeName, cell.value}
@@ -188,7 +195,7 @@ func (relation RelationIndex) Summarize(size int) SummaryResult {
 
 // DebugPrint prints a summary
 func (summary SummaryResult) DebugPrint() {
-	fmt.Printf("Summary (covers %d attributes):\n", summary.SummaryCover)
+	fmt.Printf("Summary (cover: %g):\n", summary.SummaryCover)
 
 	table := tablewriter.NewWriter(os.Stdout)
 
@@ -219,7 +226,7 @@ func (summary SummaryResult) DebugPrint() {
 
 	for i, cells := range summary.Summary {
 		values := make([]string, len(names))
-		values[len(values)-2] = fmt.Sprintf("%d", summary.FormulaCover[i])
+		values[len(values)-2] = fmt.Sprintf("%g", summary.FormulaCover[i])
 		for _, cell := range cells {
 			key := fmt.Sprintf("%s (%s)", cell.attributeName, cell.attributeType)
 

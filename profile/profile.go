@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"math/rand"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 var cpuprofile = flag.String("cpuprofile", "cpu.prof", "write cpu profile to file")
 var memprofile = flag.String("memprofile", "mem.prof", "write memory profile to this file")
+var weightfunc = flag.String("weightfunc", "equal", "weight function (equal or exponential)")
 
 func main() {
 	flag.Parse()
@@ -25,9 +27,18 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
+	rand.Seed(42)
+
 	types := []string{"single", "single", "single", "set", "set"}
 	names := []string{"s0", "s1", "s2", "set0", "set1"}
 	numTuples := 100000
+
+	assessor := summarize.MakeEqualWeightAssessor()
+
+	if *weightfunc == "exponential" {
+		assessor = summarize.MakeExponentialAssessor([]float64{0.5, 0.5, 0.5, 0.5, 0.5})
+		assessor.NumTuples = numTuples
+	}
 
 	relation, err := summarize.NewIndex(types, names, numTuples)
 	if err != nil {
@@ -37,15 +48,15 @@ func main() {
 	attrs := relation.Attrs()
 
 	for i := 0; i < numTuples; i++ {
-		(*attrs)[0].AddCell(randomdata.FirstName(randomdata.Female), i)
-		(*attrs)[1].AddCell(randomdata.LastName(), i)
-		(*attrs)[2].AddCell(randomdata.FullName(randomdata.RandomGender), i)
+		(*attrs)[0].AddCell(randomdata.FirstName(randomdata.Female), i, assessor)
+		(*attrs)[1].AddCell(randomdata.LastName(), i, assessor)
+		(*attrs)[2].AddCell(randomdata.FullName(randomdata.RandomGender), i, assessor)
 
 		for j := 0; j < 3; j++ {
-			(*attrs)[3].AddCell(randomdata.City(), i)
+			(*attrs)[3].AddCell(randomdata.City(), i, assessor)
 		}
 		for j := 0; j < 6; j++ {
-			(*attrs)[4].AddCell(randomdata.State(randomdata.Large), i)
+			(*attrs)[4].AddCell(randomdata.State(randomdata.Large), i, assessor)
 		}
 	}
 
